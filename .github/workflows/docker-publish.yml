@@ -13,7 +13,7 @@ concurrency:
 # Docker Hub namespace. Override by setting the DOCKERHUB_NAMESPACE repo
 # variable (Settings → Secrets and variables → Actions → Variables).
 env:
-  NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE || 'saassy' }}
+  NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE || 'tqdminc' }}
 
 jobs:
   publish:
