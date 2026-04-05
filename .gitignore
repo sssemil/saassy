@@ -1,25 +1,26 @@
-/target
-*.log
+# Environment & editor
 .env
 .env.test
 .idea
-apps/*/.idea
+*.log
 
-# sqlx offline data cache should be committed, but ignore any generated db dumps
+# Rust
+services/user-gateway/target/
+target/
+
+# Node / Next.js (all services)
+services/*/node_modules/
+services/*/.next/
+services/*/.turbo/
+services/*/.vercel/
+services/*/npm-debug.log*
+services/*/yarn-error.log*
+services/*/package-lock.json
+services/*/tsconfig.tsbuildinfo
+services/*/next-env.d.ts
+
+# SQLx offline cache: keep committed, but ignore any generated db dumps
 *.sql.dump
-
-# Node/Next.js (ui)
-apps/ui/node_modules
-apps/ui/.next
-apps/ui/.turbo
-apps/ui/.vercel
-apps/ui/npm-debug.log*
-apps/ui/yarn-error.log*
-apps/ui/package-lock.json
-apps/ui/tsconfig.tsbuildinfo
-apps/ui/.next
-
-apps/api/target
 
 # Secrets — generated locally via infra/generate-secrets.sh
 infra/secrets/*

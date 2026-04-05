@@ -1,0 +1,38 @@
+{
+	# Dev: no auto HTTPS. In prod, replace the site block with your domain and
+	# Caddy will auto-provision TLS via Let's Encrypt.
+	auto_https off
+}
+
+:80 {
+	encode gzip
+
+	# user-gateway — the Rust API (auth, users, admin, audit)
+	handle /api/* {
+		reverse_proxy user-gateway:3001
+	}
+
+	# admin-ui — reusable admin panel
+	handle /admin* {
+		reverse_proxy admin-ui:3100
+	}
+
+	# user-ingress — reusable end-user auth + profile UI
+	handle /login {
+		reverse_proxy user-ingress:3200
+	}
+	handle /magic {
+		reverse_proxy user-ingress:3200
+	}
+	handle /profile* {
+		reverse_proxy user-ingress:3200
+	}
+	handle /callback/* {
+		reverse_proxy user-ingress:3200
+	}
+
+	# project-web — the project-specific frontend, catches everything else
+	handle {
+		reverse_proxy project-web:3000
+	}
+}

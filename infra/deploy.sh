@@ -1,75 +1,69 @@
 #!/usr/bin/env bash
+# Deploy all 4 service images + compose + Caddyfile + .env to a remote host.
+#
+# Usage:
+#   DEPLOY_HOST=example.com [DEPLOY_USER=ubuntu] [REMOTE_DIR=/opt/saas] \
+#     [ENV_FILE=.env] [SSH_OPTS="-p 2222"] ./infra/deploy.sh
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-INFRA_DIR="${ROOT_DIR}/infra"
-COMPOSE_FILE="${INFRA_DIR}/compose.yml"
-ENV_FILE="${ENV_FILE:-${INFRA_DIR}/.env}"
-SECRETS_DIR="${SECRETS_DIR:-${INFRA_DIR}/secrets}"
-NGINX_DIR="${INFRA_DIR}/nginx"
+COMPOSE_FILE="${ROOT_DIR}/docker-compose.yml"
+CADDY_DIR="${ROOT_DIR}/infra/caddy"
+ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env}"
 
 DEPLOY_HOST="${DEPLOY_HOST:-}"
 DEPLOY_USER="${DEPLOY_USER:-$USER}"
-REMOTE_DIR="${REMOTE_DIR:-/opt/common-saas-template}"
+REMOTE_DIR="${REMOTE_DIR:-/opt/saas}"
 SSH_OPTS="${SSH_OPTS:-}"
 
-API_IMAGE="saas-api:latest"
-UI_IMAGE="saas-ui:latest"
-
-usage() {
-  cat <<EOF
-Usage: DEPLOY_HOST=example.com [DEPLOY_USER=ubuntu] [REMOTE_DIR=/opt/common-saas-template] \
-[ENV_FILE=infra/.env] [SECRETS_DIR=infra/secrets] [SSH_OPTS="-p 2222"] ./infra/deploy.sh
-EOF
-}
+IMAGES=(
+  "saas/user-gateway:latest"
+  "saas/user-ingress:latest"
+  "saas/admin-ui:latest"
+  "saas/project-web:latest"
+)
 
 require() {
   command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }
 }
 
-[ -z "$DEPLOY_HOST" ] && { echo "DEPLOY_HOST is required"; usage; exit 1; }
-
+[ -z "$DEPLOY_HOST" ] && { echo "DEPLOY_HOST is required" >&2; exit 1; }
 require docker
 require ssh
 require rsync
 
 [ -f "$COMPOSE_FILE" ] || { echo "Compose file not found at $COMPOSE_FILE" >&2; exit 1; }
-[ -f "$ENV_FILE" ] || { echo "Env file not found at $ENV_FILE" >&2; exit 1; }
-[ -f "${SECRETS_DIR}/jwt_secret" ] || { echo "Secret file ${SECRETS_DIR}/jwt_secret is required" >&2; exit 1; }
+[ -f "$ENV_FILE" ] || { echo "Env file not found at $ENV_FILE (copy .env.example to .env)" >&2; exit 1; }
 
-echo "Building images..."
-DOCKER_BUILDKIT=1 bash "${ROOT_DIR}/build-images.sh"
+echo "==> Building all service images locally"
+bash "${ROOT_DIR}/build-images.sh"
 
-IMAGES_DIR="$(mktemp -d "${INFRA_DIR}/images.XXXX")"
+IMAGES_DIR="$(mktemp -d)"
 trap 'rm -rf "$IMAGES_DIR"' EXIT
 
-docker save "$API_IMAGE" > "${IMAGES_DIR}/saas-api.tar"
-docker save "$UI_IMAGE" > "${IMAGES_DIR}/saas-ui.tar"
+for img in "${IMAGES[@]}"; do
+  safe="$(echo "$img" | tr '/:' '__')"
+  echo "==> docker save $img"
+  docker save "$img" > "${IMAGES_DIR}/${safe}.tar"
+done
 
-echo "Syncing artifacts to ${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}"
-ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" "mkdir -p ${REMOTE_DIR}/images ${REMOTE_DIR}/nginx ${REMOTE_DIR}/secrets" || true
+echo "==> Syncing to ${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}"
+ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" "mkdir -p ${REMOTE_DIR}/infra/caddy ${REMOTE_DIR}/images"
 
-rsync -az -e "ssh ${SSH_OPTS}" "$COMPOSE_FILE" "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/compose.yml"
+rsync -az -e "ssh ${SSH_OPTS}" "$COMPOSE_FILE" "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/docker-compose.yml"
 rsync -az -e "ssh ${SSH_OPTS}" "$ENV_FILE" "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/.env"
-rsync -az -e "ssh ${SSH_OPTS}" "$NGINX_DIR/" "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/nginx/"
-rsync -az -e "ssh ${SSH_OPTS}" "${INFRA_DIR}/certbot-check.sh" "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/certbot-check.sh"
-rsync -az -e "ssh ${SSH_OPTS}" "$SECRETS_DIR/" "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/secrets/"
+rsync -az -e "ssh ${SSH_OPTS}" "${CADDY_DIR}/" "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/infra/caddy/"
 rsync -az -e "ssh ${SSH_OPTS}" "$IMAGES_DIR/" "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/images/"
 
-echo "Deploying on remote host..."
-ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" <<EOF
+echo "==> Loading images and starting stack on remote host"
+ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" bash <<'REMOTE'
 set -euo pipefail
-cd "${REMOTE_DIR}"
-chmod +x certbot-check.sh
-docker load -i images/saas-api.tar
-docker load -i images/saas-ui.tar
+cd "${REMOTE_DIR:-/opt/saas}"
+for tar in images/*.tar; do
+  docker load -i "$tar"
+done
+docker compose --env-file .env up -d
+docker compose ps
+REMOTE
 
-# Try docker compose (v2) first, fall back to docker-compose (v1)
-if docker compose version >/dev/null 2>&1; then
-  docker compose -f compose.yml --env-file .env up -d
-else
-  docker-compose -f compose.yml --env-file .env up -d
-fi
-EOF
-
-echo "Deployment finished."
+echo "==> Done."

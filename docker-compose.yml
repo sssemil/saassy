@@ -3,30 +3,103 @@ services:
     image: postgres:16-alpine
     container_name: saas-postgres
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: common_saas_template
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-saas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: user_gateway
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-saas}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [saas-net]
 
   redis:
     image: redis:7-alpine
     container_name: saas-redis
-    command: ["redis-server", "--save", "\"\"", "--appendonly", "no"]
-    ports:
-      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [saas-net]
+
+  user-gateway:
+    build: ./services/user-gateway
+    image: saas/user-gateway:latest
+    container_name: saas-user-gateway
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-saas}:${POSTGRES_PASSWORD}@postgres:5432/user_gateway
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      RESEND_API_KEY: ${RESEND_API_KEY:-placeholder}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@localhost}
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost}
+      CORS_ORIGIN: ${APP_ORIGIN:-http://localhost}
+      BIND_ADDR: 0.0.0.0:3001
+      RUST_LOG: ${RUST_LOG:-info}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      IMPERSONATION_TTL_MINUTES: ${IMPERSONATION_TTL_MINUTES:-60}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [saas-net]
+
+  user-ingress:
+    build: ./services/user-ingress
+    image: saas/user-ingress:latest
+    container_name: saas-user-ingress
+    environment:
+      USER_GATEWAY_URL: http://user-gateway:3001
+      NODE_ENV: production
+    depends_on: [user-gateway]
+    networks: [saas-net]
+
+  admin-ui:
+    build: ./services/admin-ui
+    image: saas/admin-ui:latest
+    container_name: saas-admin-ui
+    environment:
+      USER_GATEWAY_URL: http://user-gateway:3001
+      NODE_ENV: production
+    depends_on: [user-gateway]
+    networks: [saas-net]
+
+  project-web:
+    build: ./services/project-web
+    image: saas/project-web:latest
+    container_name: saas-project-web
+    environment:
+      USER_GATEWAY_URL: http://user-gateway:3001
+      NODE_ENV: production
+    depends_on: [user-gateway]
+    networks: [saas-net]
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: saas-caddy
+    ports:
+      - "${CADDY_HTTP_PORT:-80}:80"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - user-gateway
+      - user-ingress
+      - admin-ui
+      - project-web
+    networks: [saas-net]
 
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  saas-net:
+    driver: bridge
