@@ -46,6 +46,26 @@ jobs:
         env:
           SQLX_OFFLINE: "true"
 
+  cargo-audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/user-gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: services/user-gateway
+          shared-key: audit
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Run cargo audit
+        # Ignores listed in services/user-gateway/.cargo/audit.toml (rsa via
+        # sqlx-mysql transitive — we only use the Postgres driver).
+        run: cargo audit
+
   next-services:
     name: ${{ matrix.service }} (Next.js)
     runs-on: ubuntu-latest
@@ -73,3 +93,6 @@ jobs:
         run: npx next build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+
+      - name: npm audit (production deps, moderate+)
+        run: npm audit --omit=dev --audit-level=moderate

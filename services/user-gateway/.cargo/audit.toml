@@ -1,0 +1,12 @@
+# cargo-audit configuration
+#
+# RUSTSEC-2023-0071 (rsa 0.9.x — Marvin Attack timing sidechannel) is pulled
+# in transitively via `sqlx-mysql`, which we do not use. saassy's user-gateway
+# only uses the Postgres driver; the MySQL driver code path is never reached
+# at runtime. The advisory has no fixed upgrade path in the rsa crate yet, so
+# the sqlx maintainers' guidance is to ignore it for Postgres-only builds.
+#
+# See: https://github.com/launchbadge/sqlx/issues/2911
+
+[advisories]
+ignore = ["RUSTSEC-2023-0071"]

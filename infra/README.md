@@ -1,60 +1,49 @@
-# Dokustatus Infra
+# infra/
 
-Scripts and compose files for building images, shipping them to a remote host over SSH, and running the stack with Nginx + Certbot.
+Deployment assets for the saassy stack. Most of what used to live here has
+moved to the repo root (`docker-compose.yml`, `.env.example`); what remains
+is Caddy config and a deploy script for shipping images to a remote host.
 
 ## Files
-- `compose.yml` — deploys postgres, redis, api, ui, nginx-http/https, certbot.
-- `.env.example` — copy to `.env` and fill values (domain, email, API URLs, DB/Redis, rate limits).
-- `secrets/` — place sensitive values as files (see below). Directory is gitignored.
-- `deploy.sh` — builds images, syncs infra assets to the target server, loads images, and runs `docker compose up -d`.
-- `setup_firewall.sh` — configures UFW + Docker firewall rules on a remote host (installs ufw/iptables if missing).
 
-## Secrets directory
-Create text files containing only the secret value:
-- `infra/secrets/jwt_secret` — JWT signing key.
-- `infra/secrets/process_number_key` — base64 key for encrypting process numbers (PROCESS_NUMBER_KEY).
-- `infra/secrets/resend_api_key` — Resend API key.
-- `infra/secrets/postgres_password` — Postgres password (used by the DB container and to build `DATABASE_URL` for the API).
-- `infra/secrets/redis_password` — Redis password (used by Redis and to build `REDIS_URL` for the API).
+- `caddy/Caddyfile` — single reverse proxy config. Routes `/api/*` to
+  user-gateway, `/admin*` to admin-ui, `/login`/`/magic`/`/profile*` to
+  user-ingress, everything else to project-web. See the Caddyfile itself
+  for the full route table.
+- `secrets/` — gitignored dir for any file-based secrets the stack may need.
+  Currently empty (only `.gitkeep` is tracked).
+- `deploy.sh` — builds all four service images locally, saves them to
+  tarballs, rsyncs the compose file, `.env`, Caddyfile, and images to a
+  remote host, then runs `docker compose up -d` there.
+- `setup_firewall.sh` — configures UFW + Docker firewall rules on a remote
+  host. Optional hardening helper.
+- `generate-secrets.sh` — generates placeholder files in `secrets/`. Kept
+  around for projects that want file-based secrets; not required by the
+  current compose setup (which reads everything from environment variables
+  in `.env`).
+- `images/` — where `deploy.sh` stashes built image tarballs before rsync.
 
-These get mounted as Docker secrets and exported to env vars for the API container.
+## Local dev
 
-To generate fresh random secrets (skips files that already exist):
+For local development you don't need anything in this dir — just run
+`docker compose up -d --build` from the repo root. The Caddyfile here is
+mounted into the Caddy container by the root `docker-compose.yml`.
+
+## Deploying to a remote host
+
+Set `DEPLOY_HOST` (and optionally `DEPLOY_USER`, `REMOTE_DIR`, `SSH_OPTS`)
+and run from the repo root:
+
 ```bash
-./infra/generate-secrets.sh
-```
-
-If Docker builds need host DNS/proxy, you can pass build args to both images:
-```bash
-BUILD_ARGS="--network=host" ./infra/deploy.sh
-```
-
-To harden a host firewall with UFW + Docker integration:
-```bash
-HOST=root@your-host ./infra/setup_firewall.sh
-# optional toggles: SSH_OPTS="-p 2222" TAILSCALE_ALLOW=0 ALLOW_HTTP=0 ALLOW_HTTPS=0
-```
-
-## Environment (.env)
-Copy `.env.example` to `.env` and adjust:
-- Domain: set `LETSENCRYPT_PRIMARY_DOMAIN` and `LETSENCRYPT_DOMAINS` (e.g. `dokustatus.de,dokustatus.de`).
-- Cert email: `LETSENCRYPT_EMAIL`.
-- API/UI: `NEXT_PUBLIC_API_BASE_URL`, `APP_ORIGIN`, `API_PORT`, `UI_PORT`.
-- Backend config: DB/Redis hosts/ports/users, `EMAIL_FROM`, optional `PASS_STATUS_*`, rate limits.
-
-## Deploy
-Example to deploy to `root@116.203.46.179` into `/opt/dokustatus`:
-```bash
-DEPLOY_HOST=116.203.46.179 \
+DEPLOY_HOST=your.host.example.com \
 DEPLOY_USER=root \
-REMOTE_DIR=/opt/dokustatus \
 ./infra/deploy.sh
 ```
-You can pass SSH options (e.g. non-standard port) via `SSH_OPTS="-p 2222"`.
 
-The script will:
-1. Build local images (reuses `build-images.sh`).
-2. Save them as tarballs and rsync them, along with `compose.yml`, `.env`, nginx templates, `certbot-check.sh`, and `secrets/`, to the remote host.
-3. Load the images and run `docker compose -f compose.yml --env-file .env up -d` on the server.
+The script builds all four images, saves them as tarballs, rsyncs them
+alongside `docker-compose.yml` / `.env` / the Caddyfile to `/opt/saassy/`
+on the target, loads them, and runs `docker compose up -d`.
 
-Ensure Docker is installed on the target host and that you can SSH as the specified user.
+For TLS, set `SITE_ADDRESS=<your-domain>` in the remote `.env` before
+deploying — Caddy will auto-provision a Let's Encrypt certificate via the
+HTTP-01 challenge on port 80.

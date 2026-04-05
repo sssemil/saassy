@@ -4,6 +4,22 @@
 {$SITE_ADDRESS:http://:80} {
 	encode gzip
 
+	# Baseline security headers. HSTS is only emitted when Caddy is serving
+	# HTTPS (i.e. when SITE_ADDRESS is a real domain) — sending it on plain
+	# HTTP would be a no-op at best and a footgun at worst.
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		# Strip the Server header so it doesn't advertise Caddy version.
+		-Server
+	}
+	@https {
+		protocol https
+	}
+	header @https Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
 	# user-gateway — the Rust API (auth, users, admin, audit)
 	handle /api/* {
 		reverse_proxy user-gateway:3001
