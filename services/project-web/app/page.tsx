@@ -8,9 +8,12 @@ export default function LandingPage() {
         fontFamily: 'var(--font-mono)',
       }}
     >
-      <h1 style={{ fontSize: 28, marginBottom: 16 }}>common-saas-template</h1>
+      <h1 style={{ fontSize: 28, marginBottom: 16 }}>saassy</h1>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
         This is the <code>project-web</code> service — the project-specific frontend in the
+        <a href="https://github.com/sssemil/saassy" style={{ color: 'var(--text-link)', marginLeft: 4 }}>
+          saassy
+        </a>{' '}
         template. Replace this with your own landing page.
       </p>
 

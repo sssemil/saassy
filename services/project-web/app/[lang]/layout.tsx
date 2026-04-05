@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'common-saas-template',
-  description: 'SaaS template',
+  title: 'saassy',
+  description: 'saassy',
 }
 
 export async function generateStaticParams() {

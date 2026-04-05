@@ -3,8 +3,8 @@ import { cookies } from 'next/headers'
 import ImpersonationBanner from '../components/ImpersonationBanner'
 
 export const metadata = {
-  title: 'common-saas-template',
-  description: 'SaaS template',
+  title: 'saassy',
+  description: 'saassy',
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

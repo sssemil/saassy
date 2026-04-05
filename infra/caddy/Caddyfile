@@ -1,10 +1,7 @@
-{
-	# Dev: no auto HTTPS. In prod, replace the site block with your domain and
-	# Caddy will auto-provision TLS via Let's Encrypt.
-	auto_https off
-}
-
-:80 {
+# SITE_ADDRESS defaults to plain HTTP on :80 for local dev.
+# In prod, set SITE_ADDRESS=saassy.xyz (no scheme) in .env and Caddy auto-
+# provisions TLS via Let's Encrypt using the HTTP-01 challenge on port 80.
+{$SITE_ADDRESS:http://:80} {
 	encode gzip
 
 	# user-gateway — the Rust API (auth, users, admin, audit)

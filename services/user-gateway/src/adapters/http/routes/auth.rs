@@ -141,8 +141,7 @@ async fn verify(
         .get("access_token")
         .ok_or(AppError::InvalidCredentials)?;
     let claims = jwt::verify(access.value(), &app_state.config.jwt_secret)?;
-    let user_id =
-        uuid::Uuid::parse_str(&claims.sub).map_err(|_| AppError::InvalidCredentials)?;
+    let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| AppError::InvalidCredentials)?;
     let profile = app_state
         .user_repo
         .get_profile_by_id(user_id)

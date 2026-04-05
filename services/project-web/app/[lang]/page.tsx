@@ -14,7 +14,7 @@ export default async function Page({
 
   return (
     <main style={{ maxWidth: 640, margin: '48px auto', padding: 24 }}>
-      <h1>common-saas-template</h1>
+      <h1>saassy</h1>
       <p>
         {safeLang === 'de'
           ? 'Willkommen. Ersetze diese Seite durch deine eigene Landing-Page.'

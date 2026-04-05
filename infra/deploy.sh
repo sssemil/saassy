@@ -2,7 +2,7 @@
 # Deploy all 4 service images + compose + Caddyfile + .env to a remote host.
 #
 # Usage:
-#   DEPLOY_HOST=example.com [DEPLOY_USER=ubuntu] [REMOTE_DIR=/opt/saas] \
+#   DEPLOY_HOST=example.com [DEPLOY_USER=ubuntu] [REMOTE_DIR=/opt/saassy] \
 #     [ENV_FILE=.env] [SSH_OPTS="-p 2222"] ./infra/deploy.sh
 set -euo pipefail
 
@@ -13,14 +13,14 @@ ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env}"
 
 DEPLOY_HOST="${DEPLOY_HOST:-}"
 DEPLOY_USER="${DEPLOY_USER:-$USER}"
-REMOTE_DIR="${REMOTE_DIR:-/opt/saas}"
+REMOTE_DIR="${REMOTE_DIR:-/opt/saassy}"
 SSH_OPTS="${SSH_OPTS:-}"
 
 IMAGES=(
-  "saas/user-gateway:latest"
-  "saas/user-ingress:latest"
-  "saas/admin-ui:latest"
-  "saas/project-web:latest"
+  "saassy/user-gateway:latest"
+  "saassy/user-ingress:latest"
+  "saassy/admin-ui:latest"
+  "saassy/project-web:latest"
 )
 
 require() {
@@ -58,7 +58,7 @@ rsync -az -e "ssh ${SSH_OPTS}" "$IMAGES_DIR/" "${DEPLOY_USER}@${DEPLOY_HOST}:${R
 echo "==> Loading images and starting stack on remote host"
 ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" bash <<'REMOTE'
 set -euo pipefail
-cd "${REMOTE_DIR:-/opt/saas}"
+cd "${REMOTE_DIR:-/opt/saassy}"
 for tar in images/*.tar; do
   docker load -i "$tar"
 done

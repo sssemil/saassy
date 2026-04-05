@@ -3,9 +3,7 @@ use axum_extra::extract::cookie::CookieJar;
 use uuid::Uuid;
 
 use crate::{
-    adapters::http::app_state::AppState,
-    app_error::AppError,
-    application::jwt,
+    adapters::http::app_state::AppState, app_error::AppError, application::jwt,
     use_cases::user::UserProfile,
 };
 
@@ -25,8 +23,7 @@ impl FromRequestParts<AppState> for CurrentUser {
             .get("access_token")
             .ok_or(AppError::InvalidCredentials)?;
         let claims = jwt::verify(access.value(), &state.config.jwt_secret)?;
-        let user_id =
-            Uuid::parse_str(&claims.sub).map_err(|_| AppError::InvalidCredentials)?;
+        let user_id = Uuid::parse_str(&claims.sub).map_err(|_| AppError::InvalidCredentials)?;
         let profile = state
             .user_repo
             .get_profile_by_id(user_id)

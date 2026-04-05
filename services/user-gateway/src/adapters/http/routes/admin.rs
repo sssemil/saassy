@@ -229,10 +229,14 @@ async fn impersonate_user(
         .await?
         .ok_or(AppError::NotFound)?;
     if target.is_admin {
-        return Err(AppError::Conflict("cannot impersonate another admin".into()));
+        return Err(AppError::Conflict(
+            "cannot impersonate another admin".into(),
+        ));
     }
     if target.is_frozen {
-        return Err(AppError::Conflict("cannot impersonate a frozen user".into()));
+        return Err(AppError::Conflict(
+            "cannot impersonate a frozen user".into(),
+        ));
     }
 
     let ttl = time::Duration::minutes(state.config.impersonation_ttl_minutes);

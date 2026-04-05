@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  user-gateway:
+    name: user-gateway (Rust)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/user-gateway
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: services/user-gateway
+
+      - name: cargo fmt --check
+        run: cargo fmt --check
+
+      - name: cargo check (offline SQLX)
+        run: cargo check --all-targets
+        env:
+          SQLX_OFFLINE: "true"
+
+      - name: cargo clippy (deny warnings)
+        run: cargo clippy --all-targets -- -D warnings
+        env:
+          SQLX_OFFLINE: "true"
+
+      - name: cargo test
+        run: cargo test
+        env:
+          SQLX_OFFLINE: "true"
+
+  next-services:
+    name: ${{ matrix.service }} (Next.js)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [user-ingress, admin-ui, project-web]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: npm install
+        run: npm install --no-audit --no-fund --loglevel=error
+
+      - name: tsc --noEmit
+        run: npx tsc --noEmit
+
+      - name: next build
+        run: npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"

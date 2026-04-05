@@ -2,7 +2,7 @@ use url::Url;
 
 use crate::application::language::UserLanguage;
 
-const BRAND_NAME: &str = "My SaaS";
+const BRAND_NAME: &str = "saassy";
 const COMPANY_NAME: &str = "Your Company";
 const COMPANY_ADDRESS: &str = "Your Address";
 

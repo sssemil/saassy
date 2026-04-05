@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>saassy — reusable SaaS starter template</title>
+    <meta
+      name="description"
+      content="Opinionated starter template for single-tenant SaaS products. Reusable auth, admin panel with impersonation, magic-link sign in, audit log. Four microservice containers, one docker compose up."
+    />
+    <meta property="og:title" content="saassy" />
+    <meta property="og:description" content="Reusable auth + admin microservice containers for your next SaaS." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://saassy.xyz" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <div class="brand">saassy</div>
+        <nav>
+          <a href="#start">Get started</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#services">Services</a>
+          <a href="#customize">Customize</a>
+          <a href="https://github.com/sssemil/saassy">GitHub ↗</a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="hero">
+      <div class="wrap">
+        <div class="tag">opinionated SaaS starter</div>
+        <h1>Stop rebuilding auth and admin for every new project.</h1>
+        <p class="lede">
+          <strong>saassy</strong> is a single-tenant SaaS starter that ships auth, user
+          management, an admin panel with impersonation and audit logging, and a reverse
+          proxy — as four reusable Docker containers that you never touch.
+          Replace only the project-specific frontend and ship.
+        </p>
+        <div class="ctas">
+          <a class="btn primary" href="#start">Get started →</a>
+          <a class="btn ghost" href="https://github.com/sssemil/saassy">View on GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <section id="what">
+      <div class="wrap">
+        <h2>What you get</h2>
+        <ul>
+          <li>
+            <strong>Passwordless magic-link auth</strong> via Resend. Sessions are JWT
+            cookies; Redis stores magic-link tokens with TTL.
+          </li>
+          <li>
+            <strong>Admin panel</strong> with user search, freeze/unfreeze, hard delete,
+            impersonation (with banner + short-TTL token), and an append-only audit log.
+          </li>
+          <li>
+            <strong>Self-contained</strong>: user-gateway runs its own migrations on
+            startup via <code>sqlx::migrate!</code>, so there's no separate migrate
+            service.
+          </li>
+          <li>
+            <strong>Same-origin by default</strong>: Caddy fronts everything at one
+            domain, so one cookie jar works across all UI services. No CORS
+            wrangling.
+          </li>
+          <li>
+            <strong>Inter-service auth without shared secrets</strong>: downstream
+            services forward cookies to <code>GET /api/auth/verify</code>. Revocation
+            is instant because user-gateway loads the user on every verify.
+          </li>
+          <li>
+            <strong>Zero deploy config for TLS</strong>: set <code>SITE_ADDRESS</code>
+            to your domain and Caddy auto-provisions Let's Encrypt certs.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="start">
+      <div class="wrap">
+        <h2>Getting started</h2>
+        <p>Clone, configure two env vars, and run one command:</p>
+        <pre><code>git clone https://github.com/sssemil/saassy.git
+cd saassy
+cp .env.example .env
+# edit .env: set POSTGRES_PASSWORD and JWT_SECRET
+# (generate JWT_SECRET with: openssl rand -base64 32)
+docker compose up -d --build</code></pre>
+
+        <h3>1. Visit the app</h3>
+        <p>Open <code>http://localhost</code> (or whatever <code>CADDY_HTTP_PORT</code> you set):</p>
+        <ul>
+          <li><code>/</code> — project-web landing page</li>
+          <li><code>/login</code> — magic-link sign in</li>
+          <li><code>/dashboard</code> — auth-gated example (redirects to /login if not signed in)</li>
+          <li><code>/profile</code> — your account page</li>
+          <li><code>/admin</code> — admin panel (admins only)</li>
+        </ul>
+
+        <h3>2. Sign in</h3>
+        <p>
+          Enter your email on <code>/login</code>. The magic link shows up in
+          user-gateway's logs — or set a real <code>RESEND_API_KEY</code> in
+          <code>.env</code> and you'll get an actual email.
+        </p>
+        <pre><code>docker compose logs -f user-gateway</code></pre>
+
+        <h3>3. Become an admin</h3>
+        <p>
+          Add your email to the <code>ADMIN_EMAILS</code> variable in <code>.env</code>
+          (comma-separated for multiple admins), then restart user-gateway:
+        </p>
+        <pre><code>docker compose restart user-gateway</code></pre>
+        <p>
+          The next time you sign in (or simply freshen your session), the admin flag
+          is applied. Visit <code>/admin</code> — you're in.
+        </p>
+
+        <div class="callout">
+          <strong>Security note</strong>: <code>ADMIN_EMAILS</code> grants admin on
+          login only. Removing an email from the list does <em>not</em> revoke admin.
+          That's deliberate: rotating the env var can't lock you out of your own
+          system. To revoke, set <code>is_admin = false</code> in Postgres directly.
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <div class="wrap">
+        <h2>Architecture</h2>
+        <p>
+          Four microservices + Caddy + Postgres + Redis. Caddy is the single HTTP
+          entry point and routes each path to the service that owns it:
+        </p>
+<pre class="ascii">                         ┌─────────┐
+                         │  Caddy  │  :80 (dev) / :443 (prod, auto TLS)
+                         └────┬────┘
+                              │
+        ┌───────────┬─────────┼────────────┬─────────────┐
+        │           │         │            │             │
+        ▼           ▼         ▼            ▼             ▼
+┌──────────────┬─────────────┬────────────┬────────────┬────────┐
+│ user-gateway │user-ingress │  admin-ui  │project-web │ static │
+│    Rust      │  Next.js    │  Next.js   │  Next.js   │ assets │
+│              │             │            │            │        │
+│   /api/*     │ /login      │  /admin*   │  /         │        │
+│              │ /magic      │            │  /dash…    │        │
+│              │ /profile*   │            │            │        │
+└──────┬───────┴─────────────┴────────────┴────────────┴────────┘
+       │
+       │ forward user's cookies to /api/auth/verify
+       │ for identity checks — no shared JWT_SECRET
+       │ in downstream services
+       ▼
+┌─────────────────┐
+│ Postgres + Redis│
+└─────────────────┘</pre>
+
+        <h3>Caddy routes</h3>
+        <div class="route">
+          <span class="path">/api/*</span>
+          <span class="target">→ user-gateway:3001</span>
+          <span class="path">/admin*</span>
+          <span class="target">→ admin-ui:3100</span>
+          <span class="path">/login, /magic</span>
+          <span class="target">→ user-ingress:3200</span>
+          <span class="path">/profile*</span>
+          <span class="target">→ user-ingress:3200</span>
+          <span class="path">/callback/*</span>
+          <span class="target">→ user-ingress:3200 (future OAuth)</span>
+          <span class="path">/</span>
+          <span class="target">→ project-web:3000 (catch-all)</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="services">
+      <div class="wrap">
+        <h2>Services</h2>
+        <div class="grid-services">
+          <div class="svc">
+            <span class="kind">Rust · Core</span>
+            <h3>user-gateway</h3>
+            <p>
+              Axum + SQLx API. Owns the <code>users</code> and
+              <code>admin_audit_log</code> tables. Exposes /api/auth/*,
+              /api/user/*, /api/admin/*.
+            </p>
+          </div>
+          <div class="svc">
+            <span class="kind">Next.js · Optional</span>
+            <h3>user-ingress</h3>
+            <p>
+              End-user auth + profile UI. /login, /magic, /profile. Reserved
+              /callback/* for future OAuth.
+            </p>
+          </div>
+          <div class="svc">
+            <span class="kind">Next.js · Optional</span>
+            <h3>admin-ui</h3>
+            <p>
+              Admin panel: overview stats, user search, freeze/delete/impersonate,
+              audit log.
+            </p>
+          </div>
+          <div class="svc">
+            <span class="kind">Next.js · Replace</span>
+            <h3>project-web</h3>
+            <p>
+              Your project-specific frontend. Ships with a landing page and a
+              /dashboard example showing how to call /api/auth/verify. Replace this.
+            </p>
+          </div>
+        </div>
+
+        <h3>API endpoints (user-gateway)</h3>
+        <table>
+          <thead>
+            <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>POST</td><td><code>/api/auth/request</code></td><td>Send a magic link</td></tr>
+            <tr><td>POST</td><td><code>/api/auth/consume</code></td><td>Consume a magic link, issue session</td></tr>
+            <tr><td>GET</td><td><code>/api/auth/verify</code></td><td>Returns <code>{id, email, is_admin}</code> or 401/403</td></tr>
+            <tr><td>POST</td><td><code>/api/auth/logout</code></td><td>Clear all session cookies</td></tr>
+            <tr><td>DELETE</td><td><code>/api/user/delete</code></td><td>Self-delete your account</td></tr>
+            <tr><td>GET</td><td><code>/api/admin/me</code></td><td>Admin profile (used by admin-ui as guard)</td></tr>
+            <tr><td>GET</td><td><code>/api/admin/stats</code></td><td>User counts</td></tr>
+            <tr><td>GET</td><td><code>/api/admin/users?q&amp;limit&amp;offset</code></td><td>Paginated user list</td></tr>
+            <tr><td>GET</td><td><code>/api/admin/users/:id</code></td><td>User detail</td></tr>
+            <tr><td>DELETE</td><td><code>/api/admin/users/:id</code></td><td>Delete user (guards: not self, not admin)</td></tr>
+            <tr><td>POST</td><td><code>/api/admin/users/:id/freeze</code></td><td>Freeze sessions</td></tr>
+            <tr><td>POST</td><td><code>/api/admin/users/:id/unfreeze</code></td><td>Unfreeze</td></tr>
+            <tr><td>POST</td><td><code>/api/admin/users/:id/impersonate</code></td><td>Short-TTL session as another user</td></tr>
+            <tr><td>GET</td><td><code>/api/admin/audit?limit&amp;offset</code></td><td>Append-only audit log</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="customize">
+      <div class="wrap">
+        <h2>Starting a new project from saassy</h2>
+        <p>
+          Fork the repo or use it as a template on GitHub. Then:
+        </p>
+        <ul>
+          <li>
+            <strong>Leave alone</strong>: <code>services/user-gateway</code>,
+            <code>services/user-ingress</code>, <code>services/admin-ui</code>,
+            <code>infra/caddy/</code>, <code>docker-compose.yml</code>. These are the
+            reusable bits.
+          </li>
+          <li>
+            <strong>Replace</strong>: <code>services/project-web/</code> with your own
+            Next.js app (or swap it out for Astro / SvelteKit / whatever — it's just a
+            container behind Caddy).
+          </li>
+          <li>
+            <strong>Add</strong>: a project-specific backend service if you need one,
+            behind its own Caddy route. Authenticate requests by forwarding cookies to
+            <code>http://user-gateway:3001/api/auth/verify</code>.
+          </li>
+        </ul>
+
+        <h3>Checking who the user is (the one pattern that matters)</h3>
+        <p>
+          Any downstream service — Next.js server component, another backend,
+          anything — checks identity like this:
+        </p>
+        <pre><code>// services/project-web/app/dashboard/page.tsx
+import { redirect } from 'next/navigation'
+import { serverApiFetch } from '../lib/api-fetch'
+
+export default async function Dashboard() {
+  const res = await serverApiFetch('/api/auth/verify')
+  if (res.status === 401 || res.status === 403) {
+    redirect('/login?next=/dashboard')
+  }
+  const me = await res.json()  // { id, email, is_admin }
+  return &lt;main&gt;Hello, {me.email}&lt;/main&gt;
+}</code></pre>
+        <p>
+          <code>serverApiFetch</code> forwards incoming cookies to
+          <code>user-gateway</code>. No shared secret. No JWT decoding on your end.
+          If you freeze or delete the user from the admin panel, their next request
+          fails within milliseconds.
+        </p>
+      </div>
+    </section>
+
+    <section id="images">
+      <div class="wrap">
+        <h2>Using the prebuilt images</h2>
+        <p>
+          The four service images are built and pushed to Docker Hub on every
+          <code>main</code> push by the CI pipeline. For multi-arch support, images
+          are built for <code>linux/amd64</code> and <code>linux/arm64</code>.
+        </p>
+        <pre><code>docker pull saassy/user-gateway:latest
+docker pull saassy/user-ingress:latest
+docker pull saassy/admin-ui:latest
+docker pull saassy/project-web:latest</code></pre>
+        <p>
+          Tags include <code>latest</code>, <code>main</code>, and short commit SHAs.
+          Tag a release like <code>v0.2.0</code> on GitHub and you also get
+          <code>v0.2.0</code> and <code>0.2</code> tags.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap">
+        saassy · MIT licensed ·
+        <a href="https://github.com/sssemil/saassy">GitHub</a> ·
+        <a href="https://hub.docker.com/u/saassy">Docker Hub</a>
+      </div>
+    </footer>
+  </body>
+</html>

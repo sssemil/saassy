@@ -1,8 +1,8 @@
 use dotenvy::dotenv;
 use tracing::info;
 
-use user_gateway::infra::{app::create_app, setup::init_app_state};
 use std::net::SocketAddr;
+use user_gateway::infra::{app::create_app, setup::init_app_state};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

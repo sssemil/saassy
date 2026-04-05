@@ -1,9 +1,12 @@
-# common-saas-template
+# saassy
 
 Opinionated starter template for single-tenant SaaS products, split into
 reusable microservice containers. Passwordless magic-link auth, admin panel
 with impersonation + audit log, Rust API, Next.js UIs, Postgres + Redis, all
 fronted by Caddy.
+
+**Docs & getting started**: [saassy.xyz](https://saassy.xyz)
+**Prebuilt images**: [`hub.docker.com/u/saassy`](https://hub.docker.com/u/saassy)
 
 The goal is that **you don't rebuild auth + admin for every new project**.
 You clone this repo, replace `services/project-web/` with your own frontend,
@@ -172,6 +175,31 @@ USER_GATEWAY_URL=http://localhost:3001 npm run dev
 
 Without Caddy in the picture you lose same-origin cookie sharing, so you'll
 want to hit only one UI service at a time or set up Caddy anyway.
+
+## Continuous integration & publishing
+
+Three GitHub Actions workflows live in `.github/workflows/`:
+
+| Workflow             | Trigger                  | What it does                                                                |
+|----------------------|--------------------------|-----------------------------------------------------------------------------|
+| `ci.yml`             | push, PR                 | `cargo fmt/check/clippy/test` for user-gateway; `tsc` + `next build` for the three Next.js services. |
+| `docker-publish.yml` | push to `main`, `v*` tag | Builds all 4 images for `linux/amd64` + `linux/arm64` and pushes to Docker Hub as `${NAMESPACE}/<service>`. |
+| `pages.yml`          | push to `main` touching `docs/**` | Deploys the static site under `docs/` to GitHub Pages. |
+
+### One-time setup on a fresh repo
+
+1. **Docker Hub**
+   - Create (or reuse) a Docker Hub namespace — e.g. `saassy` — and an access token.
+   - In the GitHub repo: Settings → Secrets and variables → Actions.
+     - Secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`.
+     - (Optional) Variables: `DOCKERHUB_NAMESPACE` (defaults to `saassy`).
+2. **GitHub Pages**
+   - Settings → Pages → Source: **GitHub Actions**.
+   - Settings → Pages → Custom domain: `saassy.xyz` (or your domain), enable HTTPS.
+   - Point your DNS at GitHub Pages (`CNAME` to `sssemil.github.io.` or the apex A records).
+   - The `docs/CNAME` file is already committed so Pages picks it up.
+3. **Tagging a release**
+   - `git tag v0.2.0 && git push --tags` → Docker Hub gets `0.2.0`, `0.2`, `latest`, `sha-<short>` tags.
 
 ## Notices
 

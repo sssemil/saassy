@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: saas-postgres
+    container_name: saassy-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-saas}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
@@ -13,23 +13,23 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-    networks: [saas-net]
+    networks: [saassy-net]
 
   redis:
     image: redis:7-alpine
-    container_name: saas-redis
+    container_name: saassy-redis
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
-    networks: [saas-net]
+    networks: [saassy-net]
 
   user-gateway:
     build: ./services/user-gateway
-    image: saas/user-gateway:latest
-    container_name: saas-user-gateway
+    image: saassy/user-gateway:latest
+    container_name: saassy-user-gateway
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-saas}:${POSTGRES_PASSWORD}@postgres:5432/user_gateway
       REDIS_URL: redis://redis:6379
@@ -47,43 +47,48 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks: [saas-net]
+    networks: [saassy-net]
 
   user-ingress:
     build: ./services/user-ingress
-    image: saas/user-ingress:latest
-    container_name: saas-user-ingress
+    image: saassy/user-ingress:latest
+    container_name: saassy-user-ingress
     environment:
       USER_GATEWAY_URL: http://user-gateway:3001
       NODE_ENV: production
     depends_on: [user-gateway]
-    networks: [saas-net]
+    networks: [saassy-net]
 
   admin-ui:
     build: ./services/admin-ui
-    image: saas/admin-ui:latest
-    container_name: saas-admin-ui
+    image: saassy/admin-ui:latest
+    container_name: saassy-admin-ui
     environment:
       USER_GATEWAY_URL: http://user-gateway:3001
       NODE_ENV: production
     depends_on: [user-gateway]
-    networks: [saas-net]
+    networks: [saassy-net]
 
   project-web:
     build: ./services/project-web
-    image: saas/project-web:latest
-    container_name: saas-project-web
+    image: saassy/project-web:latest
+    container_name: saassy-project-web
     environment:
       USER_GATEWAY_URL: http://user-gateway:3001
       NODE_ENV: production
     depends_on: [user-gateway]
-    networks: [saas-net]
+    networks: [saassy-net]
 
   caddy:
     image: caddy:2-alpine
-    container_name: saas-caddy
+    container_name: saassy-caddy
+    environment:
+      # Dev default serves plain HTTP on :80. Prod sets SITE_ADDRESS to a real
+      # domain (e.g. saassy.xyz) and Caddy auto-provisions TLS via Let's Encrypt.
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://:80}
     ports:
       - "${CADDY_HTTP_PORT:-80}:80"
+      - "${CADDY_HTTPS_PORT:-443}:443"
     volumes:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -93,7 +98,7 @@ services:
       - user-ingress
       - admin-ui
       - project-web
-    networks: [saas-net]
+    networks: [saassy-net]
 
 volumes:
   postgres_data:
@@ -101,5 +106,5 @@ volumes:
   caddy_config:
 
 networks:
-  saas-net:
+  saassy-net:
     driver: bridge

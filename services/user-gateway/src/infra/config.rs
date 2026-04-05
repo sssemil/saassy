@@ -50,12 +50,11 @@ impl AppConfig {
         let rate_limit_per_email: u64 = get_env_default("RATE_LIMIT_PER_EMAIL", 30);
         let database_url: String = get_env("DATABASE_URL");
 
-        let admin_emails: Vec<String> =
-            get_env_default("ADMIN_EMAILS", String::new())
-                .split(',')
-                .map(|s| s.trim().to_lowercase())
-                .filter(|s| !s.is_empty())
-                .collect();
+        let admin_emails: Vec<String> = get_env_default("ADMIN_EMAILS", String::new())
+            .split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect();
         let impersonation_ttl_minutes: i64 = get_env_default("IMPERSONATION_TTL_MINUTES", 60);
 
         Self {
