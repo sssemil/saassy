@@ -35,9 +35,11 @@ export default function MagicPage() {
         
         setStatus("Authentication successful! Redirecting...");
         setDone(true);
-        
+
+        const next = localStorage.getItem("post_login_next") || "/";
+        localStorage.removeItem("post_login_next");
         setTimeout(() => {
-          window.location.href = "/";
+          window.location.href = next;
         }, 500);
       } catch (e: any) {
         setStatus(e.message || "Authentication failed");

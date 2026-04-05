@@ -4,7 +4,10 @@ use crate::{
         config::AppConfig, magic_links::MagicLinkStore, postgres_persistence,
         rate_limit::RateLimiter,
     },
-    use_cases::user::{AuthUseCases, UserRepo},
+    use_cases::{
+        audit::AuditLogRepo,
+        user::{AuthUseCases, UserRepo},
+    },
 };
 use std::fs::File;
 use std::sync::Arc;
@@ -33,6 +36,7 @@ pub async fn init_app_state() -> anyhow::Result<AppState> {
     ));
 
     let user_repo_arc = postgres_arc.clone() as Arc<dyn UserRepo>;
+    let audit_repo_arc = postgres_arc.clone() as Arc<dyn AuditLogRepo>;
 
     let auth_use_cases = AuthUseCases::new(
         user_repo_arc.clone(),
@@ -45,6 +49,7 @@ pub async fn init_app_state() -> anyhow::Result<AppState> {
         config: Arc::new(config),
         auth_use_cases: Arc::new(auth_use_cases),
         user_repo: user_repo_arc,
+        audit_repo: audit_repo_arc,
         rate_limiter,
     })
 }

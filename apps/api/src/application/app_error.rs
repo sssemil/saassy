@@ -11,11 +11,20 @@ pub enum AppError {
     #[error("Invalid credentials")]
     InvalidCredentials,
 
+    #[error("Forbidden")]
+    Forbidden,
+
+    #[error("Not found")]
+    NotFound,
+
+    #[error("Account frozen")]
+    AccountFrozen,
+
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
-    #[error("Too many documents")]
-    TooManyDocuments,
+    #[error("Conflict: {0}")]
+    Conflict(String),
 
     #[error("Internal error: {0}")]
     Internal(String),
@@ -25,9 +34,12 @@ pub enum AppError {
 pub enum ErrorCode {
     DatabaseError,
     InvalidCredentials,
+    Forbidden,
+    NotFound,
+    AccountFrozen,
     RateLimited,
     InvalidInput,
-    TooManyDocuments,
+    Conflict,
     InternalError,
 }
 
@@ -36,9 +48,12 @@ impl ErrorCode {
         match self {
             ErrorCode::DatabaseError => "DATABASE_ERROR",
             ErrorCode::InvalidCredentials => "INVALID_CREDENTIALS",
+            ErrorCode::Forbidden => "FORBIDDEN",
+            ErrorCode::NotFound => "NOT_FOUND",
+            ErrorCode::AccountFrozen => "ACCOUNT_FROZEN",
             ErrorCode::RateLimited => "RATE_LIMITED",
             ErrorCode::InvalidInput => "INVALID_INPUT",
-            ErrorCode::TooManyDocuments => "TOO_MANY_DOCUMENTS",
+            ErrorCode::Conflict => "CONFLICT",
             ErrorCode::InternalError => "INTERNAL_ERROR",
         }
     }

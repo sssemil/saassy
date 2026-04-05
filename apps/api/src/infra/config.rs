@@ -21,6 +21,8 @@ pub struct AppConfig {
     pub rate_limit_per_ip: u64,
     pub rate_limit_per_email: u64,
     pub database_url: String,
+    pub admin_emails: Vec<String>,
+    pub impersonation_ttl_minutes: i64,
 }
 
 impl AppConfig {
@@ -48,6 +50,14 @@ impl AppConfig {
         let rate_limit_per_email: u64 = get_env_default("RATE_LIMIT_PER_EMAIL", 30);
         let database_url: String = get_env("DATABASE_URL");
 
+        let admin_emails: Vec<String> =
+            get_env_default("ADMIN_EMAILS", String::new())
+                .split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect();
+        let impersonation_ttl_minutes: i64 = get_env_default("IMPERSONATION_TTL_MINUTES", 60);
+
         Self {
             jwt_secret,
             access_token_ttl: Duration::seconds(access_token_ttl_secs),
@@ -63,6 +73,8 @@ impl AppConfig {
             rate_limit_per_ip,
             rate_limit_per_email,
             database_url,
+            admin_emails,
+            impersonation_ttl_minutes,
         }
     }
 }

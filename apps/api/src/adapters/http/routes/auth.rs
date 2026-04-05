@@ -8,12 +8,14 @@ use axum::{
     routing::{get, post},
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use time;
 use uuid::Uuid;
 
 use crate::{
-    adapters::http::app_state::AppState, app_error::AppResult, application::jwt,
+    adapters::http::app_state::AppState,
+    app_error::{AppError, AppResult},
+    application::jwt,
     use_cases::user::AuthUseCases,
 };
 
@@ -72,6 +74,18 @@ async fn consume(
         let Some(profile) = app_state.user_repo.get_profile_by_id(user_id).await? else {
             return Ok((StatusCode::UNAUTHORIZED, HeaderMap::new()));
         };
+
+        if profile.is_frozen {
+            return Err(AppError::AccountFrozen);
+        }
+
+        // Auto-grant admin if email is in ADMIN_EMAILS list.
+        let email_lc = profile.email.to_lowercase();
+        if !profile.is_admin && app_state.config.admin_emails.contains(&email_lc) {
+            app_state.user_repo.set_admin(user_id, true).await?;
+        }
+        app_state.user_repo.touch_last_login(user_id).await?;
+
         let email = profile.email;
 
         let access = jwt::issue(
@@ -112,41 +126,55 @@ async fn consume(
     Ok((StatusCode::UNAUTHORIZED, headers))
 }
 
+#[derive(Serialize)]
+struct VerifyResponse {
+    id: uuid::Uuid,
+    email: String,
+    is_admin: bool,
+}
+
 async fn verify(
     cookies: CookieJar,
     State(app_state): State<AppState>,
-) -> AppResult<impl IntoResponse> {
-    if let Some(access_token) = cookies.get("access_token")
-        && jwt::verify(access_token.value(), &app_state.config.jwt_secret).is_ok()
-    {
-        return Ok(StatusCode::OK);
+) -> AppResult<Json<VerifyResponse>> {
+    let access = cookies
+        .get("access_token")
+        .ok_or(AppError::InvalidCredentials)?;
+    let claims = jwt::verify(access.value(), &app_state.config.jwt_secret)?;
+    let user_id =
+        uuid::Uuid::parse_str(&claims.sub).map_err(|_| AppError::InvalidCredentials)?;
+    let profile = app_state
+        .user_repo
+        .get_profile_by_id(user_id)
+        .await?
+        .ok_or(AppError::InvalidCredentials)?;
+    if profile.is_frozen {
+        return Err(AppError::AccountFrozen);
     }
-    Ok(StatusCode::UNAUTHORIZED)
+    Ok(Json(VerifyResponse {
+        id: profile.id,
+        email: profile.email,
+        is_admin: profile.is_admin,
+    }))
 }
 
 async fn logout() -> impl IntoResponse {
     let mut headers = HeaderMap::new();
-    let access = Cookie::build(("access_token", ""))
-        .http_only(true)
-        .same_site(SameSite::Lax)
-        .path("/")
-        .max_age(time::Duration::seconds(0))
-        .build();
-    let refresh = Cookie::build(("refresh_token", ""))
-        .http_only(true)
-        .same_site(SameSite::Lax)
-        .path("/")
-        .max_age(time::Duration::seconds(0))
-        .build();
-    let email = Cookie::build(("user_email", ""))
-        .http_only(false)
-        .same_site(SameSite::Lax)
-        .path("/")
-        .max_age(time::Duration::seconds(0))
-        .build();
-    headers.append("set-cookie", access.to_string().parse().unwrap());
-    headers.append("set-cookie", refresh.to_string().parse().unwrap());
-    headers.append("set-cookie", email.to_string().parse().unwrap());
+    for (name, http_only) in [
+        ("access_token", true),
+        ("refresh_token", true),
+        ("user_email", false),
+        ("impersonating", false),
+        ("login_session", true),
+    ] {
+        let c = Cookie::build((name, ""))
+            .http_only(http_only)
+            .same_site(SameSite::Lax)
+            .path("/")
+            .max_age(time::Duration::seconds(0))
+            .build();
+        headers.append("set-cookie", c.to_string().parse().unwrap());
+    }
     (StatusCode::OK, headers)
 }
 

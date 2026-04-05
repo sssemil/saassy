@@ -16,6 +16,8 @@ apps/ui/.vercel
 apps/ui/npm-debug.log*
 apps/ui/yarn-error.log*
 apps/ui/package-lock.json
+apps/ui/tsconfig.tsbuildinfo
+apps/ui/.next
 
 apps/api/target
 

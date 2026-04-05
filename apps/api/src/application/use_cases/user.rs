@@ -18,6 +18,26 @@ pub trait UserRepo: Send + Sync {
     async fn get_profile_by_id(&self, user_id: Uuid) -> AppResult<Option<UserProfile>>;
     async fn update_language(&self, user_id: Uuid, language: &str) -> AppResult<()>;
     async fn delete_user(&self, user_id: Uuid) -> AppResult<()>;
+    async fn set_admin(&self, user_id: Uuid, is_admin: bool) -> AppResult<()>;
+    async fn set_frozen(&self, user_id: Uuid, is_frozen: bool) -> AppResult<()>;
+    async fn touch_last_login(&self, user_id: Uuid) -> AppResult<()>;
+    async fn list_users(
+        &self,
+        query: Option<&str>,
+        limit: i64,
+        offset: i64,
+    ) -> AppResult<Vec<UserProfile>>;
+    async fn count_users(&self, query: Option<&str>) -> AppResult<i64>;
+    async fn stats(&self) -> AppResult<UserStats>;
+}
+
+#[derive(Debug, Clone)]
+pub struct UserStats {
+    pub total_users: i64,
+    pub users_last_7_days: i64,
+    pub users_last_30_days: i64,
+    pub frozen_users: i64,
+    pub admin_users: i64,
 }
 
 #[async_trait]
@@ -198,7 +218,11 @@ pub struct UserProfile {
     pub id: Uuid,
     pub email: String,
     pub language: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub last_login_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub is_admin: bool,
+    pub is_frozen: bool,
 }
 
 fn generate_token() -> String {

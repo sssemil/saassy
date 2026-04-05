@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod auth;
 pub mod user;
 
@@ -9,4 +10,5 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .nest("/auth", auth::router())
         .nest("/user", user::router())
+        .nest("/admin", admin::router())
 }
