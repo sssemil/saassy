@@ -10,7 +10,7 @@ RUN cargo install sqlx-cli --no-default-features --features postgres
 WORKDIR /app
 
 # Pre-fetch dependencies for faster builds
-COPY apps/api/Cargo.toml apps/api/Cargo.lock ./
+COPY apps/api/Cargo.toml ./
 RUN mkdir -p src && echo "fn main() {}" > src/main.rs
 RUN cargo fetch
 
@@ -26,11 +26,11 @@ RUN pacman -S --noconfirm --needed ca-certificates openssl
 RUN pacman -Scc --noconfirm
 
 WORKDIR /app
-COPY --from=builder /app/target/release/dokustatus /usr/local/bin/dokustatus
+COPY --from=builder /app/target/release/common-saas-template /usr/local/bin/common-saas-template
 COPY --from=builder /root/.cargo/bin/sqlx /usr/local/bin/sqlx
 COPY apps/api/migrations ./migrations
 
 ENV RUST_LOG=info
 EXPOSE 3001
 
-CMD ["dokustatus"]
+CMD ["common-saas-template"]

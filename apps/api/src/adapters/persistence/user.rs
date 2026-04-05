@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -14,8 +14,8 @@ use crate::{
 #[derive(sqlx::FromRow, Debug, Serialize)]
 pub struct UserDb {
     pub id: Uuid,
-    pub created_at: Option<NaiveDateTime>,
-    pub updated_at: Option<NaiveDateTime>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub email: String,
     pub language: String,
 }

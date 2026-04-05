@@ -2,9 +2,9 @@ use url::Url;
 
 use crate::application::language::UserLanguage;
 
-const BRAND_NAME: &str = "Dokustatus";
-const COMPANY_NAME: &str = "TQDM Inc.";
-const COMPANY_ADDRESS: &str = "1111B S Governors Ave, STE 23256, Dover, DE 19904, USA";
+const BRAND_NAME: &str = "My SaaS";
+const COMPANY_NAME: &str = "Your Company";
+const COMPANY_ADDRESS: &str = "Your Address";
 
 fn origin_label(app_origin: &str) -> String {
     Url::parse(app_origin)

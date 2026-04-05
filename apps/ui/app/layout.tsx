@@ -1,26 +1,14 @@
 import './globals.css';
 
-export const metadata = { 
-  title: 'dokustatus', 
-  description: 'Track document status updates' 
+export const metadata = {
+  title: 'common-saas-template',
+  description: 'SaaS template'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link 
-          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" 
-          rel="stylesheet" 
-        />
-        <script 
-          defer 
-          src="https://cloud.umami.is/script.js" 
-          data-website-id="40de9409-4559-4c23-8c77-ae3649708bd4"
-        />
-      </head>
+      <head />
       {children}
     </>
   );

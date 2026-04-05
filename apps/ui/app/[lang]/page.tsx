@@ -1,6 +1,3 @@
-import { getDictionary } from "./dictionaries";
-import PageClient from "./page-client";
-
 type SupportedLang = 'en' | 'de'
 
 function isSupportedLang(lang: string): lang is SupportedLang {
@@ -11,8 +8,16 @@ export default async function Page(props: PageProps<'/[lang]'>) {
   const { params } = props
   const { lang } = await params
 
-  const safeLang: SupportedLang = isSupportedLang(lang) ? lang : 'de'
-  const dict = await getDictionary(safeLang)
-  
-  return <PageClient lang={safeLang} dict={dict} />
+  const safeLang: SupportedLang = isSupportedLang(lang) ? lang : 'en'
+
+  return (
+    <main style={{ maxWidth: 640, margin: '48px auto', padding: 24, fontFamily: 'system-ui, sans-serif' }}>
+      <h1>common-saas-template</h1>
+      <p>
+        {safeLang === 'de'
+          ? 'Willkommen. Ersetze diese Seite durch deine eigene Landing-Page.'
+          : 'Welcome. Replace this page with your own landing page.'}
+      </p>
+    </main>
+  )
 }

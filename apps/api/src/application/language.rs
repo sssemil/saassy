@@ -7,17 +7,17 @@ pub enum UserLanguage {
 impl UserLanguage {
     pub fn from_raw(raw: Option<&str>) -> Self {
         let candidate = raw
-            .unwrap_or("de")
+            .unwrap_or("en")
             .split(',')
             .next()
-            .unwrap_or("de")
+            .unwrap_or("en")
             .split(['-', '_'])
             .next()
-            .unwrap_or("de")
+            .unwrap_or("en")
             .to_lowercase();
         match candidate.as_str() {
-            "en" => UserLanguage::En,
-            _ => UserLanguage::De,
+            "de" => UserLanguage::De,
+            _ => UserLanguage::En,
         }
     }
 

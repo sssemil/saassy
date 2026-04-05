@@ -18,3 +18,7 @@ apps/ui/yarn-error.log*
 apps/ui/package-lock.json
 
 apps/api/target
+
+# Secrets — generated locally via infra/generate-secrets.sh
+infra/secrets/*
+!infra/secrets/.gitkeep

@@ -18,7 +18,6 @@ gen_secret() {
 }
 
 gen_secret "jwt_secret"
-gen_secret "process_number_key"
-gen_secret "resend_api_key" # get a real API key for this one
 gen_secret "postgres_password"
 gen_secret "redis_password"
+gen_secret "resend_api_key" # placeholder — replace with a real Resend API key

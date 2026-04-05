@@ -8,7 +8,6 @@ use uuid::Uuid;
 
 use crate::app_error::AppResult;
 use crate::application::{
-    dictionaries::t,
     email_templates::{primary_button, wrap_email},
     language::UserLanguage,
 };
@@ -78,13 +77,13 @@ impl AuthUseCases {
         let link = format!("{}/magic?token={}", self.app_origin, raw);
         let (subject, headline, lead, button_label, reason, footer_note) = match lang {
             UserLanguage::En => (
-                "Sign in to Dokustatus",
+                "Sign in",
                 "Your sign-in link is ready",
                 format!(
                     "Use this secure link to finish signing in. It expires in {} minutes.",
                     ttl_minutes
                 ),
-                "Continue to Dokustatus",
+                "Continue",
                 format!(
                     "you asked to sign in to {}",
                     self.app_origin.trim_end_matches('/')
@@ -92,13 +91,13 @@ impl AuthUseCases {
                 "This one-time link keeps your account protected; delete this email if you did not request it.",
             ),
             UserLanguage::De => (
-                "Bei Dokustatus anmelden",
+                "Anmelden",
                 "Dein Anmeldelink ist startklar",
                 format!(
                     "Nutze diesen sicheren Link, um dich anzumelden. Er läuft in {} Minuten ab.",
                     ttl_minutes
                 ),
-                "Weiter zu Dokustatus",
+                "Weiter",
                 format!(
                     "du hast dich auf {} angemeldet",
                     self.app_origin.trim_end_matches('/')
@@ -151,28 +150,45 @@ impl AuthUseCases {
             .ok_or(crate::app_error::AppError::InvalidCredentials)?;
         let lang = UserLanguage::from_raw(lang_header.or(Some(&profile.language)));
 
-        let subject = t(lang, "emails.accountDeletion.subject");
-        let headline = t(lang, "emails.accountDeletion.headline");
-        let lead = t(lang, "emails.accountDeletion.lead");
-        let body_text = t(lang, "emails.accountDeletion.body");
-        let reason = t(lang, "emails.accountDeletion.reason")
-            .replace("{app}", self.app_origin.trim_end_matches('/'));
-        let footer = t(lang, "emails.accountDeletion.footer");
+        let (subject, headline, lead, body_text, reason, footer) = match lang {
+            UserLanguage::En => (
+                "Your account has been deleted",
+                "Account deleted",
+                "Your account and associated data have been removed.",
+                "If this was a mistake, please sign up again to create a new account.",
+                format!(
+                    "you requested to delete your account on {}",
+                    self.app_origin.trim_end_matches('/')
+                ),
+                "If you didn't request this, please contact support immediately.",
+            ),
+            UserLanguage::De => (
+                "Dein Konto wurde gelöscht",
+                "Konto gelöscht",
+                "Dein Konto und die zugehörigen Daten wurden entfernt.",
+                "Falls das ein Versehen war, melde dich einfach neu an.",
+                format!(
+                    "du hast die Löschung deines Kontos auf {} angefordert",
+                    self.app_origin.trim_end_matches('/')
+                ),
+                "Falls du das nicht warst, kontaktiere bitte sofort den Support.",
+            ),
+        };
         let body = wrap_email(
             lang,
             &self.app_origin,
-            &headline,
-            &lead,
+            headline,
+            lead,
             &format!(
                 "<p style=\"margin:12px 0 0;color:#374151;\">{}</p>",
                 body_text
             ),
             &reason,
-            Some(&footer),
+            Some(footer),
         );
 
         self.repo.delete_user(user_id).await?;
-        let _ = self.email.send(&profile.email, &subject, &body).await;
+        let _ = self.email.send(&profile.email, subject, &body).await;
         Ok(())
     }
 }
@@ -182,7 +198,7 @@ pub struct UserProfile {
     pub id: Uuid,
     pub email: String,
     pub language: String,
-    pub updated_at: Option<chrono::NaiveDateTime>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 fn generate_token() -> String {
