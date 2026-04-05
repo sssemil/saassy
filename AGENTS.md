@@ -92,3 +92,10 @@ and tsc/next-build for the three Next.js services on every push and PR.
   required but not forbidden.
 - PRs: brief description, list of commands/tests run, schema-change callout
   if applicable, screenshots for UI changes.
+
+## See also
+
+- **`SKILL.md`** at the repo root — agent-facing integration guide for
+  projects that *consume* saassy (not the contributor guide this file is).
+  Keep the two in sync when endpoints, env vars, or the Caddy route table
+  change.

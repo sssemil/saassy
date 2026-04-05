@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - "SKILL.md"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -27,6 +28,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: actions/configure-pages@v5
+
+      # Mirror SKILL.md into the Pages artifact so it's reachable at
+      # saassy.xyz/SKILL.md. The canonical copy lives at the repo root;
+      # this is a build-time mirror only (docs/SKILL.md is gitignored).
+      - name: Stage SKILL.md into docs/
+        run: cp SKILL.md docs/SKILL.md
 
       - uses: actions/upload-pages-artifact@v3
         with:

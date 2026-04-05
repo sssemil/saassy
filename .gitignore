@@ -19,6 +19,10 @@ services/*/package-lock.json
 services/*/tsconfig.tsbuildinfo
 services/*/next-env.d.ts
 
+# Build-time mirror of the canonical SKILL.md; the Pages workflow copies
+# it here before uploading the artifact. Never commit it.
+docs/SKILL.md
+
 # SQLx offline cache: keep committed, but ignore any generated db dumps
 *.sql.dump
 

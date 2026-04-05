@@ -29,6 +29,7 @@
           <a href="#architecture">Architecture</a>
           <a href="#services">Services</a>
           <a href="#customize">Customize</a>
+          <a href="#agents">AI agents</a>
           <a href="https://github.com/sssemil/saassy">GitHub ↗</a>
         </nav>
       </div>
@@ -299,6 +300,26 @@ export default async function Dashboard() {
       </div>
     </section>
 
+    <section id="agents">
+      <div class="wrap">
+        <h2>For AI agents</h2>
+        <p>
+          <a href="https://github.com/sssemil/saassy/blob/main/SKILL.md">SKILL.md</a>
+          is saassy's single-file integration guide targeted at AI coding
+          agents. It explains how to consume the stack from a downstream
+          project: the auth-check pattern, the env vars, the anti-patterns.
+          Pipe it straight into your agent — no file on disk needed.
+          Run from the root of the project you want to add saassy to:
+        </p>
+        <p><strong>Claude Code:</strong></p>
+<pre><code>curl -fsSL https://saassy.xyz/SKILL.md \
+  | claude "Add saassy to this project following the instructions above."</code></pre>
+        <p><strong>OpenAI Codex CLI:</strong></p>
+<pre><code>curl -fsSL https://saassy.xyz/SKILL.md \
+  | codex "Add saassy to this project following the instructions above."</code></pre>
+      </div>
+    </section>
+
     <section id="images">
       <div class="wrap">
         <h2>Using the prebuilt images</h2>
@@ -323,7 +344,8 @@ docker pull tqdminc/project-web:latest</code></pre>
       <div class="wrap">
         saassy · MIT licensed ·
         <a href="https://github.com/sssemil/saassy">GitHub</a> ·
-        <a href="https://hub.docker.com/u/tqdminc">Docker Hub</a>
+        <a href="https://hub.docker.com/u/tqdminc">Docker Hub</a> ·
+        <a href="https://github.com/sssemil/saassy/blob/main/SKILL.md">SKILL.md (for AI agents)</a>
       </div>
     </footer>
   </body>

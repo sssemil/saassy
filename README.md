@@ -7,6 +7,19 @@ fronted by Caddy.
 
 **Docs & getting started**: [saassy.xyz](https://saassy.xyz)
 **Prebuilt images**: [`hub.docker.com/u/tqdminc`](https://hub.docker.com/u/tqdminc)
+**For AI agents**: see [`SKILL.md`](SKILL.md) — a concise integration guide
+for Claude Code / Codex. Pipe it straight into your agent from the project
+root; no file on disk needed:
+
+```bash
+# Claude Code
+curl -fsSL https://saassy.xyz/SKILL.md \
+  | claude "Add saassy to this project following the instructions above."
+
+# Codex CLI
+curl -fsSL https://saassy.xyz/SKILL.md \
+  | codex "Add saassy to this project following the instructions above."
+```
 
 The goal is that **you don't rebuild auth + admin for every new project**.
 You clone this repo, replace `services/project-web/` with your own frontend,
