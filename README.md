@@ -6,7 +6,7 @@ with impersonation + audit log, Rust API, Next.js UIs, Postgres + Redis, all
 fronted by Caddy.
 
 **Docs & getting started**: [saassy.xyz](https://saassy.xyz)
-**Prebuilt images**: [`hub.docker.com/u/saassy`](https://hub.docker.com/u/saassy)
+**Prebuilt images**: [`hub.docker.com/u/tqdminc`](https://hub.docker.com/u/tqdminc)
 
 The goal is that **you don't rebuild auth + admin for every new project**.
 You clone this repo, replace `services/project-web/` with your own frontend,

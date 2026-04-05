@@ -17,10 +17,10 @@ REMOTE_DIR="${REMOTE_DIR:-/opt/saassy}"
 SSH_OPTS="${SSH_OPTS:-}"
 
 IMAGES=(
-  "saassy/user-gateway:latest"
-  "saassy/user-ingress:latest"
-  "saassy/admin-ui:latest"
-  "saassy/project-web:latest"
+  "tqdminc/user-gateway:latest"
+  "tqdminc/user-ingress:latest"
+  "tqdminc/admin-ui:latest"
+  "tqdminc/project-web:latest"
 )
 
 require() {

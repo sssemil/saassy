@@ -28,7 +28,7 @@ services:
 
   user-gateway:
     build: ./services/user-gateway
-    image: saassy/user-gateway:latest
+    image: tqdminc/user-gateway:latest
     container_name: saassy-user-gateway
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-saas}:${POSTGRES_PASSWORD}@postgres:5432/user_gateway
@@ -51,7 +51,7 @@ services:
 
   user-ingress:
     build: ./services/user-ingress
-    image: saassy/user-ingress:latest
+    image: tqdminc/user-ingress:latest
     container_name: saassy-user-ingress
     environment:
       USER_GATEWAY_URL: http://user-gateway:3001
@@ -61,7 +61,7 @@ services:
 
   admin-ui:
     build: ./services/admin-ui
-    image: saassy/admin-ui:latest
+    image: tqdminc/admin-ui:latest
     container_name: saassy-admin-ui
     environment:
       USER_GATEWAY_URL: http://user-gateway:3001
@@ -71,7 +71,7 @@ services:
 
   project-web:
     build: ./services/project-web
-    image: saassy/project-web:latest
+    image: tqdminc/project-web:latest
     container_name: saassy-project-web
     environment:
       USER_GATEWAY_URL: http://user-gateway:3001
