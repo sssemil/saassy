@@ -1,5 +1,7 @@
 pub mod admin;
 pub mod auth;
+pub mod developer_auth;
+pub mod machine;
 pub mod user;
 
 use axum::Router;
@@ -10,5 +12,6 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .nest("/auth", auth::router())
         .nest("/user", user::router())
-        .nest("/admin", admin::router())
+        .nest("/admin", admin::router().merge(developer_auth::router()))
+        .nest("/machine", machine::router())
 }

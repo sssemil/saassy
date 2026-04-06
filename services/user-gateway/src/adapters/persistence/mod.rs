@@ -3,6 +3,7 @@ use sqlx::PgPool;
 use crate::app_error::AppError;
 
 pub mod audit;
+pub mod developer_auth;
 pub mod user;
 
 #[derive(Clone)]

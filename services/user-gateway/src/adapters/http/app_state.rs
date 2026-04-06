@@ -7,6 +7,7 @@ use crate::{
     infra::rate_limit::RateLimiter,
     use_cases::{
         audit::AuditLogRepo,
+        developer_auth::{DeveloperAuthRepo, DeveloperAuthUseCases},
         user::{AuthUseCases, UserRepo},
     },
 };
@@ -15,13 +16,21 @@ use crate::{
 pub struct AppState {
     pub config: Arc<AppConfig>,
     pub auth_use_cases: Arc<AuthUseCases>,
+    pub developer_auth_use_cases: Arc<DeveloperAuthUseCases>,
     pub user_repo: Arc<dyn UserRepo>,
     pub audit_repo: Arc<dyn AuditLogRepo>,
+    pub developer_auth_repo: Arc<dyn DeveloperAuthRepo>,
     pub rate_limiter: Arc<RateLimiter>,
 }
 
 impl FromRef<AppState> for Arc<AuthUseCases> {
     fn from_ref(app_state: &AppState) -> Self {
         app_state.auth_use_cases.clone()
+    }
+}
+
+impl FromRef<AppState> for Arc<DeveloperAuthUseCases> {
+    fn from_ref(app_state: &AppState) -> Self {
+        app_state.developer_auth_use_cases.clone()
     }
 }

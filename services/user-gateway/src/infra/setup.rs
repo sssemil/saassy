@@ -6,6 +6,7 @@ use crate::{
     },
     use_cases::{
         audit::AuditLogRepo,
+        developer_auth::{DeveloperAuthRepo, DeveloperAuthUseCases},
         user::{AuthUseCases, UserRepo},
     },
 };
@@ -37,6 +38,7 @@ pub async fn init_app_state() -> anyhow::Result<AppState> {
 
     let user_repo_arc = postgres_arc.clone() as Arc<dyn UserRepo>;
     let audit_repo_arc = postgres_arc.clone() as Arc<dyn AuditLogRepo>;
+    let developer_auth_repo_arc = postgres_arc.clone() as Arc<dyn DeveloperAuthRepo>;
 
     let auth_use_cases = AuthUseCases::new(
         user_repo_arc.clone(),
@@ -44,12 +46,18 @@ pub async fn init_app_state() -> anyhow::Result<AppState> {
         email.clone(),
         config.app_origin.to_string(),
     );
+    let developer_auth_use_cases = DeveloperAuthUseCases::new(
+        developer_auth_repo_arc.clone(),
+        config.machine_auth_positive_cache_ttl_ms,
+    );
 
     Ok(AppState {
         config: Arc::new(config),
         auth_use_cases: Arc::new(auth_use_cases),
+        developer_auth_use_cases: Arc::new(developer_auth_use_cases),
         user_repo: user_repo_arc,
         audit_repo: audit_repo_arc,
+        developer_auth_repo: developer_auth_repo_arc,
         rate_limiter,
     })
 }

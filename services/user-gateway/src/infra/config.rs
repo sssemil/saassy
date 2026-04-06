@@ -23,6 +23,8 @@ pub struct AppConfig {
     pub database_url: String,
     pub admin_emails: Vec<String>,
     pub impersonation_ttl_minutes: i64,
+    pub machine_auth_shared_secret: Option<SecretString>,
+    pub machine_auth_positive_cache_ttl_ms: u64,
 }
 
 impl AppConfig {
@@ -56,6 +58,12 @@ impl AppConfig {
             .filter(|s| !s.is_empty())
             .collect();
         let impersonation_ttl_minutes: i64 = get_env_default("IMPERSONATION_TTL_MINUTES", 60);
+        let machine_auth_shared_secret = std::env::var("MACHINE_AUTH_SHARED_SECRET")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .map(|value| SecretString::new(value.into()));
+        let machine_auth_positive_cache_ttl_ms: u64 =
+            get_env_default("MACHINE_AUTH_POSITIVE_CACHE_TTL_MS", 2000);
 
         Self {
             jwt_secret,
@@ -74,6 +82,8 @@ impl AppConfig {
             database_url,
             admin_emails,
             impersonation_ttl_minutes,
+            machine_auth_shared_secret,
+            machine_auth_positive_cache_ttl_ms,
         }
     }
 }
