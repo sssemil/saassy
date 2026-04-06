@@ -8,6 +8,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG ASSET_PREFIX=""
+ENV NEXT_PUBLIC_ASSET_PREFIX=${ASSET_PREFIX}
 RUN npx next build
 
 FROM node:22-bookworm-slim AS runtime

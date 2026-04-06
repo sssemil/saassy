@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  assetPrefix: process.env.NEXT_PUBLIC_ASSET_PREFIX || undefined,
   // Routes live natively under /admin/* in this service's app/ directory,
   // so Caddy's plain reverse_proxy with no prefix stripping works out of the box.
   async rewrites() {
