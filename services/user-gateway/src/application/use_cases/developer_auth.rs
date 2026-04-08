@@ -210,14 +210,22 @@ impl DeveloperAuthUseCases {
     pub async fn create_developer_account(&self, name: &str) -> AppResult<DeveloperAccount> {
         let trimmed = name.trim();
         if trimmed.is_empty() {
-            return Err(AppError::InvalidInput("developer account name is required".into()));
+            return Err(AppError::InvalidInput(
+                "developer account name is required".into(),
+            ));
         }
 
         for _ in 0..3 {
             let public_id = generate_public_id();
-            match self.repo.create_developer_account(&public_id, trimmed).await {
+            match self
+                .repo
+                .create_developer_account(&public_id, trimmed)
+                .await
+            {
                 Ok(account) => return Ok(account),
-                Err(AppError::Database(message)) if message.contains("developer_accounts_public_id_key") => {
+                Err(AppError::Database(message))
+                    if message.contains("developer_accounts_public_id_key") =>
+                {
                     continue;
                 }
                 Err(error) => return Err(error),
@@ -245,7 +253,13 @@ impl DeveloperAuthUseCases {
         let key_hash = hash_api_key(&raw_key);
         let api_key = self
             .repo
-            .create_api_key(developer_account_id, trimmed, &key_prefix, &key_hash, expires_at)
+            .create_api_key(
+                developer_account_id,
+                trimmed,
+                &key_prefix,
+                &key_hash,
+                expires_at,
+            )
             .await?;
         Ok(IssuedApiKey { api_key, raw_key })
     }
@@ -257,8 +271,12 @@ impl DeveloperAuthUseCases {
             .await?
             .ok_or(AppError::NotFound)?;
         self.repo.revoke_api_key(api_key_id).await?;
-        self.issue_api_key(existing.developer_account_id, &existing.name, existing.expires_at)
-            .await
+        self.issue_api_key(
+            existing.developer_account_id,
+            &existing.name,
+            existing.expires_at,
+        )
+        .await
     }
 
     pub async fn introspect(
@@ -376,7 +394,10 @@ impl DeveloperAuthUseCases {
 }
 
 pub fn generate_public_id() -> String {
-    format!("dev_{}", hex::encode(Uuid::new_v4().as_bytes())[..16].to_string())
+    format!(
+        "dev_{}",
+        hex::encode(Uuid::new_v4().as_bytes())[..16].to_string()
+    )
 }
 
 pub fn generate_api_key() -> String {
@@ -398,11 +419,7 @@ pub fn hash_api_key(raw_key: &str) -> String {
     hex::encode(hasher.finalize())
 }
 
-pub fn scope_allows(
-    scope: &DeveloperApiKeyScope,
-    action: &MachineAction,
-    bucket: &str,
-) -> bool {
+pub fn scope_allows(scope: &DeveloperApiKeyScope, action: &MachineAction, bucket: &str) -> bool {
     if scope.resource_type != ScopeResourceType::Bucket {
         return false;
     }

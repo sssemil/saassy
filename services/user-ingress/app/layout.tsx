@@ -1,14 +1,18 @@
-import './globals.css'
+import "./globals.css";
 
 export const metadata = {
-  title: 'Sign in',
-  description: 'Sign in and manage your account',
-}
+  title: "Sign in",
+  description: "Sign in and manage your account",
+};
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>{children}</body>
     </html>
-  )
+  );
 }

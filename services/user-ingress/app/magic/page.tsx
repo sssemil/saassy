@@ -19,7 +19,7 @@ export default function MagicPage() {
       setError(true);
       return;
     }
-    
+
     (async () => {
       try {
         const res = await fetch("/api/auth/consume", {
@@ -28,11 +28,11 @@ export default function MagicPage() {
           body: JSON.stringify({ token }),
           credentials: "include",
         });
-        
+
         if (!res.ok) {
           throw new Error("Invalid or expired token");
         }
-        
+
         setStatus("Authentication successful! Redirecting...");
         setDone(true);
 
@@ -50,12 +50,15 @@ export default function MagicPage() {
 
   return (
     <main>
-      <div className="container" style={{ maxWidth: '480px', margin: '80px auto', textAlign: 'center' }}>
+      <div
+        className="container"
+        style={{ maxWidth: "480px", margin: "80px auto", textAlign: "center" }}
+      >
         <h1>🔑 Magic Link</h1>
-        
+
         {done ? (
           <div className="message success">
-            <div className="loading-text" style={{ justifyContent: 'center' }}>
+            <div className="loading-text" style={{ justifyContent: "center" }}>
               <span className="spinner" />
               <span>{status}</span>
             </div>
@@ -63,14 +66,14 @@ export default function MagicPage() {
         ) : error ? (
           <div className="message error">
             <strong>✗ Authentication Failed</strong>
-            <p style={{ marginTop: '8px', marginBottom: 0 }}>{status}</p>
-            <p style={{ marginTop: '16px', marginBottom: 0 }}>
+            <p style={{ marginTop: "8px", marginBottom: 0 }}>{status}</p>
+            <p style={{ marginTop: "16px", marginBottom: 0 }}>
               <a href="/">← Return to sign in</a>
             </p>
           </div>
         ) : (
           <div className="message info">
-            <div className="loading-text" style={{ justifyContent: 'center' }}>
+            <div className="loading-text" style={{ justifyContent: "center" }}>
               <span className="spinner" />
               <span>{status}</span>
             </div>

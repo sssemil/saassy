@@ -1,17 +1,18 @@
 import Link from "next/link";
+import CreateDeveloperForm from "./CreateDeveloperForm";
 import { serverApiFetch } from "../../lib/api-fetch";
 
-type User = {
+type Developer = {
   id: string;
-  email: string;
-  created_at: string;
-  last_login_at: string | null;
-  is_admin: boolean;
+  public_id: string;
+  name: string;
   is_frozen: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 type ListResponse = {
-  users: User[];
+  developers: Developer[];
   total: number;
   limit: number;
   offset: number;
@@ -19,7 +20,7 @@ type ListResponse = {
 
 const PAGE_SIZE = 50;
 
-export default async function UsersListPage({
+export default async function DevelopersPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; page?: string }>;
@@ -34,21 +35,23 @@ export default async function UsersListPage({
   qs.set("limit", String(PAGE_SIZE));
   qs.set("offset", String(offset));
 
-  const res = await serverApiFetch(`/api/admin/users?${qs.toString()}`);
-  if (!res.ok) throw new Error(`users load failed: ${res.status}`);
+  const res = await serverApiFetch(`/api/admin/developers?${qs.toString()}`);
+  if (!res.ok) throw new Error(`developers load failed: ${res.status}`);
   const data: ListResponse = await res.json();
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Users</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Developers</h1>
+
+      <CreateDeveloperForm />
 
       <form method="get" style={{ marginBottom: 16 }}>
         <input
           type="search"
           name="q"
           defaultValue={q}
-          placeholder="Search by email"
+          placeholder="Search by developer name or public id"
           style={{
             padding: "8px 12px",
             background: "var(--bg-secondary)",
@@ -57,7 +60,7 @@ export default async function UsersListPage({
             borderRadius: 4,
             fontFamily: "var(--font-mono)",
             fontSize: 13,
-            minWidth: 280,
+            minWidth: 320,
           }}
         />
         <button
@@ -91,14 +94,14 @@ export default async function UsersListPage({
         >
           <thead>
             <tr style={{ background: "var(--bg-tertiary)", textAlign: "left" }}>
-              <th style={th}>Email</th>
+              <th style={th}>Name</th>
+              <th style={th}>Public ID</th>
               <th style={th}>Created</th>
-              <th style={th}>Last login</th>
-              <th style={th}>Flags</th>
+              <th style={th}>Status</th>
             </tr>
           </thead>
           <tbody>
-            {data.users.length === 0 ? (
+            {data.developers.length === 0 ? (
               <tr>
                 <td
                   colSpan={4}
@@ -108,36 +111,37 @@ export default async function UsersListPage({
                     color: "var(--text-muted)",
                   }}
                 >
-                  No users found.
+                  No developer accounts found.
                 </td>
               </tr>
             ) : (
-              data.users.map((u) => (
+              data.developers.map((developer) => (
                 <tr
-                  key={u.id}
+                  key={developer.id}
                   style={{ borderTop: "1px solid var(--border-primary)" }}
                 >
                   <td style={td}>
                     <Link
-                      href={`/admin/users/${u.id}`}
+                      href={`/admin/developers/${developer.id}`}
                       style={{
                         color: "var(--text-link)",
                         textDecoration: "none",
                       }}
                     >
-                      {u.email}
+                      {developer.name}
                     </Link>
                   </td>
-                  <td style={td}>{new Date(u.created_at).toLocaleString()}</td>
                   <td style={td}>
-                    {u.last_login_at
-                      ? new Date(u.last_login_at).toLocaleString()
-                      : "—"}
+                    <code>{developer.public_id}</code>
                   </td>
                   <td style={td}>
-                    {u.is_admin && <Tag color="var(--accent-blue)">admin</Tag>}
-                    {u.is_frozen && (
+                    {new Date(developer.created_at).toLocaleString()}
+                  </td>
+                  <td style={td}>
+                    {developer.is_frozen ? (
                       <Tag color="var(--accent-orange)">frozen</Tag>
+                    ) : (
+                      <Tag color="var(--accent-green)">active</Tag>
                     )}
                   </td>
                 </tr>
@@ -158,7 +162,7 @@ export default async function UsersListPage({
         }}
       >
         <span>
-          {data.total.toLocaleString()} users · page {page} / {totalPages}
+          {data.total.toLocaleString()} developers · page {page} / {totalPages}
         </span>
         <span style={{ flex: 1 }} />
         {page > 1 && (

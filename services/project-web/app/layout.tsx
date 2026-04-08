@@ -1,15 +1,19 @@
-import './globals.css'
-import { cookies } from 'next/headers'
-import ImpersonationBanner from '../components/ImpersonationBanner'
+import "./globals.css";
+import { cookies } from "next/headers";
+import ImpersonationBanner from "../components/ImpersonationBanner";
 
 export const metadata = {
-  title: 'saassy',
-  description: 'saassy',
-}
+  title: "saassy",
+  description: "saassy",
+};
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies()
-  const impersonating = cookieStore.get('impersonating')?.value || null
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const cookieStore = await cookies();
+  const impersonating = cookieStore.get("impersonating")?.value || null;
 
   return (
     <html lang="en">
@@ -18,5 +22,5 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {children}
       </body>
     </html>
-  )
+  );
 }

@@ -1,23 +1,23 @@
-'use client'
+"use client";
 
 export default function ImpersonationBanner({ email }: { email: string }) {
   async function endImpersonation() {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
-    window.location.href = '/login'
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    window.location.href = "/login";
   }
 
   return (
     <div
       style={{
-        background: 'var(--accent-orange)',
-        color: '#000',
-        padding: '8px 16px',
-        textAlign: 'center',
+        background: "var(--accent-orange)",
+        color: "#000",
+        padding: "8px 16px",
+        textAlign: "center",
         fontSize: 13,
-        fontFamily: 'var(--font-mono)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        fontFamily: "var(--font-mono)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         gap: 16,
       }}
     >
@@ -28,18 +28,18 @@ export default function ImpersonationBanner({ email }: { email: string }) {
       <button
         onClick={endImpersonation}
         style={{
-          background: '#000',
-          color: '#fff',
-          border: 'none',
-          padding: '4px 10px',
+          background: "#000",
+          color: "#fff",
+          border: "none",
+          padding: "4px 10px",
           borderRadius: 4,
-          cursor: 'pointer',
-          fontFamily: 'var(--font-mono)',
+          cursor: "pointer",
+          fontFamily: "var(--font-mono)",
           fontSize: 12,
         }}
       >
         End impersonation
       </button>
     </div>
-  )
+  );
 }

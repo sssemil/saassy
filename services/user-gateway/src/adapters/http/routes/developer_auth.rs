@@ -97,7 +97,10 @@ async fn list_developers(
         .developer_auth_repo
         .list_developer_accounts(q, limit, offset)
         .await?;
-    let total = state.developer_auth_repo.count_developer_accounts(q).await?;
+    let total = state
+        .developer_auth_repo
+        .count_developer_accounts(q)
+        .await?;
     Ok(Json(ListDevelopersResponse {
         developers,
         total,
@@ -336,7 +339,10 @@ async fn create_scope(
         ));
     }
     if request.match_type != ScopeMatchType::All
-        && request.bucket.as_deref().is_none_or(|bucket| bucket.trim().is_empty())
+        && request
+            .bucket
+            .as_deref()
+            .is_none_or(|bucket| bucket.trim().is_empty())
     {
         return Err(AppError::InvalidInput(
             "bucket is required for exact or prefix scopes".into(),
@@ -414,7 +420,10 @@ async fn list_audit(
         .developer_auth_repo
         .list_developer_auth_audit(limit, offset)
         .await?;
-    let total = state.developer_auth_repo.count_developer_auth_audit().await?;
+    let total = state
+        .developer_auth_repo
+        .count_developer_auth_audit()
+        .await?;
     Ok(Json(ListAuditResponse {
         entries,
         total,

@@ -1,9 +1,4 @@
-use axum::{
-    Json, Router,
-    extract::State,
-    http::HeaderMap,
-    routing::post,
-};
+use axum::{Json, Router, extract::State, http::HeaderMap, routing::post};
 use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 
@@ -40,7 +35,12 @@ async fn introspect(
     authorize_machine_caller(&state, &headers)?;
     let decision = state
         .developer_auth_use_cases
-        .introspect(&request.api_key, request.action, &request.owner, &request.bucket)
+        .introspect(
+            &request.api_key,
+            request.action,
+            &request.owner,
+            &request.bucket,
+        )
         .await?;
     Ok(Json(MachineIntrospectResponse { decision }))
 }
