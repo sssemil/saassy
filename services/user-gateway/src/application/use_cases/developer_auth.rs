@@ -394,10 +394,7 @@ impl DeveloperAuthUseCases {
 }
 
 pub fn generate_public_id() -> String {
-    format!(
-        "dev_{}",
-        &hex::encode(Uuid::new_v4().as_bytes())[..16]
-    )
+    format!("dev_{}", &hex::encode(Uuid::new_v4().as_bytes())[..16])
 }
 
 pub fn generate_api_key() -> String {
