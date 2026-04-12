@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Scope = {
   id: string;
@@ -25,13 +26,18 @@ type KeyWithScopes = {
   scopes: Scope[];
 };
 
-export default function DeveloperConsoleActions({
+export default function DeveloperAccessSection({
+  userId,
   developerPublicId,
+  isUserFrozen,
   keys,
 }: {
+  userId: string;
   developerPublicId: string;
+  isUserFrozen: boolean;
   keys: KeyWithScopes[];
 }) {
+  const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newKeyName, setNewKeyName] = useState("");
@@ -71,7 +77,7 @@ export default function DeveloperConsoleActions({
       if (!newKeyName.trim()) {
         throw new Error("API key name is required");
       }
-      const res = await call("/api/developer/keys", "POST", {
+      const res = await call(`/api/admin/users/${userId}/developer/keys`, "POST", {
         name: newKeyName.trim(),
       });
       const issued = await res.json();
@@ -80,11 +86,22 @@ export default function DeveloperConsoleActions({
         `Copy the new API key for ${developerPublicId}. It will not be shown again.`,
         issued.raw_key,
       );
-      window.location.reload();
+      router.refresh();
     });
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
+      {isUserFrozen && (
+        <section style={card}>
+          <h2 style={{ fontSize: 16, marginBottom: 8 }}>User frozen</h2>
+          <p style={{ marginBottom: 0, color: "var(--text-warning)" }}>
+            This user is frozen, so their API keys no longer authorize traffic.
+            You can still revoke existing keys or delete scopes, but issuing or
+            rotating keys stays disabled until the user is unfrozen.
+          </p>
+        </section>
+      )}
+
       <section style={card}>
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Issue API key</h2>
         <div
@@ -100,11 +117,15 @@ export default function DeveloperConsoleActions({
               type="text"
               value={newKeyName}
               onChange={(e) => setNewKeyName(e.target.value)}
-              placeholder="Key name, e.g. local dev"
-              disabled={busy !== null}
+              placeholder="Key name, e.g. production worker"
+              disabled={busy !== null || isUserFrozen}
             />
           </div>
-          <Btn onClick={createKey} busy={busy === "create-key"}>
+          <Btn
+            onClick={createKey}
+            busy={busy === "create-key"}
+            disabled={isUserFrozen}
+          >
             Create key
           </Btn>
         </div>
@@ -119,11 +140,14 @@ export default function DeveloperConsoleActions({
             {keys.map((entry) => (
               <KeyCard
                 key={entry.key.id}
+                userId={userId}
                 developerPublicId={developerPublicId}
+                isUserFrozen={isUserFrozen}
                 entry={entry}
                 busy={busy}
                 onAction={runAction}
                 onCall={call}
+                onRefresh={() => router.refresh()}
               />
             ))}
           </div>
@@ -136,17 +160,23 @@ export default function DeveloperConsoleActions({
 }
 
 function KeyCard({
+  userId,
   developerPublicId,
+  isUserFrozen,
   entry,
   busy,
   onAction,
   onCall,
+  onRefresh,
 }: {
+  userId: string;
   developerPublicId: string;
+  isUserFrozen: boolean;
   entry: KeyWithScopes;
   busy: string | null;
   onAction: (name: string, fn: () => Promise<void>) => Promise<void>;
   onCall: (path: string, method: string, body?: unknown) => Promise<Response>;
+  onRefresh: () => void;
 }) {
   const [matchType, setMatchType] = useState<"all" | "exact" | "prefix">("all");
   const [bucket, setBucket] = useState("");
@@ -158,27 +188,34 @@ function KeyCard({
     if (
       entry.key.expires_at &&
       new Date(entry.key.expires_at).getTime() < Date.now()
-    )
+    ) {
       return "expired";
+    }
     return "active";
   }, [entry.key.expires_at, entry.key.revoked_at]);
 
   const revoke = () =>
     onAction(`revoke-${entry.key.id}`, async () => {
       if (!confirm(`Revoke key ${entry.key.name}?`)) return;
-      await onCall(`/api/developer/keys/${entry.key.id}/revoke`, "POST");
-      window.location.reload();
+      await onCall(
+        `/api/admin/users/${userId}/developer/keys/${entry.key.id}/revoke`,
+        "POST",
+      );
+      onRefresh();
     });
 
   const rotate = () =>
     onAction(`rotate-${entry.key.id}`, async () => {
-      const res = await onCall(`/api/developer/keys/${entry.key.id}/rotate`, "POST");
+      const res = await onCall(
+        `/api/admin/users/${userId}/developer/keys/${entry.key.id}/rotate`,
+        "POST",
+      );
       const issued = await res.json();
       window.prompt(
         `Copy the rotated API key for ${developerPublicId}. It will not be shown again.`,
         issued.raw_key,
       );
-      window.location.reload();
+      onRefresh();
     });
 
   const createScope = () =>
@@ -186,27 +223,31 @@ function KeyCard({
       if (matchType !== "all" && !bucket.trim()) {
         throw new Error("Bucket is required for exact or prefix scopes");
       }
-      await onCall(`/api/developer/keys/${entry.key.id}/scopes`, "POST", {
-        match_type: matchType,
-        bucket: matchType === "all" ? null : bucket.trim(),
-        can_read: canRead,
-        can_write: canWrite,
-      });
+      await onCall(
+        `/api/admin/users/${userId}/developer/keys/${entry.key.id}/scopes`,
+        "POST",
+        {
+          match_type: matchType,
+          bucket: matchType === "all" ? null : bucket.trim(),
+          can_read: canRead,
+          can_write: canWrite,
+        },
+      );
       setBucket("");
       setCanRead(true);
       setCanWrite(false);
       setMatchType("all");
-      window.location.reload();
+      onRefresh();
     });
 
   const deleteScope = (scopeId: string) =>
     onAction(`delete-scope-${scopeId}`, async () => {
       if (!confirm("Delete this scope?")) return;
-      await onCall(`/api/developer/scopes/${scopeId}`, "DELETE");
-      window.location.reload();
+      await onCall(`/api/admin/users/${userId}/developer/scopes/${scopeId}`, "DELETE");
+      onRefresh();
     });
 
-  const mutationsDisabled = status !== "active";
+  const issueDisabled = isUserFrozen || status !== "active";
 
   return (
     <div
@@ -263,14 +304,14 @@ function KeyCard({
           <Btn
             onClick={rotate}
             busy={busy === `rotate-${entry.key.id}`}
-            disabled={mutationsDisabled}
+            disabled={issueDisabled}
           >
             Rotate
           </Btn>
           <Btn
             onClick={revoke}
             busy={busy === `revoke-${entry.key.id}`}
-            disabled={mutationsDisabled}
+            disabled={status !== "active"}
             color="var(--accent-red)"
           >
             Revoke
@@ -326,7 +367,6 @@ function KeyCard({
                 <Btn
                   onClick={() => deleteScope(scope.id)}
                   busy={busy === `delete-scope-${scope.id}`}
-                  disabled={status !== "active"}
                   color="var(--accent-red)"
                 >
                   Delete scope
@@ -350,6 +390,7 @@ function KeyCard({
               onChange={(e) =>
                 setMatchType(e.target.value as "all" | "exact" | "prefix")
               }
+              disabled={isUserFrozen}
             >
               <option value="all">all buckets</option>
               <option value="exact">exact bucket</option>
@@ -359,7 +400,7 @@ function KeyCard({
               type="text"
               value={bucket}
               onChange={(e) => setBucket(e.target.value)}
-              disabled={matchType === "all"}
+              disabled={matchType === "all" || isUserFrozen}
               placeholder={matchType === "prefix" ? "orders/" : "orders"}
             />
           </div>
@@ -376,6 +417,7 @@ function KeyCard({
                 type="checkbox"
                 checked={canRead}
                 onChange={(e) => setCanRead(e.target.checked)}
+                disabled={isUserFrozen}
               />
               Read
             </label>
@@ -384,13 +426,14 @@ function KeyCard({
                 type="checkbox"
                 checked={canWrite}
                 onChange={(e) => setCanWrite(e.target.checked)}
+                disabled={isUserFrozen}
               />
               Write
             </label>
             <Btn
               onClick={createScope}
               busy={busy === `create-scope-${entry.key.id}`}
-              disabled={mutationsDisabled}
+              disabled={issueDisabled}
             >
               Add scope
             </Btn>

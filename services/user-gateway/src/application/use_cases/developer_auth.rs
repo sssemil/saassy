@@ -139,24 +139,12 @@ pub struct MachineAuthDecision {
 
 #[async_trait]
 pub trait DeveloperAuthRepo: Send + Sync {
-    async fn create_developer_account(
-        &self,
-        public_id: &str,
-        name: &str,
-    ) -> AppResult<DeveloperAccount>;
     async fn create_owned_developer_account(
         &self,
         owner_user_id: Uuid,
         public_id: &str,
         name: &str,
     ) -> AppResult<DeveloperAccount>;
-    async fn list_developer_accounts(
-        &self,
-        query: Option<&str>,
-        limit: i64,
-        offset: i64,
-    ) -> AppResult<Vec<DeveloperAccount>>;
-    async fn count_developer_accounts(&self, query: Option<&str>) -> AppResult<i64>;
     async fn get_developer_account(&self, account_id: Uuid) -> AppResult<Option<DeveloperAccount>>;
     async fn get_developer_account_by_public_id(
         &self,
@@ -166,11 +154,6 @@ pub trait DeveloperAuthRepo: Send + Sync {
         &self,
         owner_user_id: Uuid,
     ) -> AppResult<Option<DeveloperAccount>>;
-    async fn set_developer_account_frozen(
-        &self,
-        account_id: Uuid,
-        is_frozen: bool,
-    ) -> AppResult<()>;
     async fn create_api_key(
         &self,
         developer_account_id: Uuid,
@@ -271,37 +254,6 @@ impl DeveloperAuthUseCases {
             "failed to allocate a unique developer account id".into(),
         ))
     }
-
-    pub async fn create_developer_account(&self, name: &str) -> AppResult<DeveloperAccount> {
-        let trimmed = name.trim();
-        if trimmed.is_empty() {
-            return Err(AppError::InvalidInput(
-                "developer account name is required".into(),
-            ));
-        }
-
-        for _ in 0..3 {
-            let public_id = generate_public_id();
-            match self
-                .repo
-                .create_developer_account(&public_id, trimmed)
-                .await
-            {
-                Ok(account) => return Ok(account),
-                Err(AppError::Database(message))
-                    if message.contains("developer_accounts_public_id_key") =>
-                {
-                    continue;
-                }
-                Err(error) => return Err(error),
-            }
-        }
-
-        Err(AppError::Conflict(
-            "failed to allocate a unique developer account id".into(),
-        ))
-    }
-
     pub async fn issue_api_key(
         &self,
         developer_account_id: Uuid,

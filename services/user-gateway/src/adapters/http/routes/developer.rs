@@ -175,7 +175,7 @@ async fn mutable_owned_account(
 ) -> AppResult<DeveloperAccount> {
     let account = owned_account(state, user).await?;
     if account.is_frozen {
-        return Err(AppError::Conflict("developer account is frozen".into()));
+        return Err(AppError::Conflict("user account is frozen".into()));
     }
     Ok(account)
 }

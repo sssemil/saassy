@@ -16,7 +16,6 @@ type Developer = {
   name: string;
   owner_user_id: string | null;
   owner_email: string | null;
-  is_frozen: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -54,7 +53,7 @@ export default async function DashboardPage() {
 
   const developerRes = await serverApiFetch("/api/developer/me");
   if (!developerRes.ok) {
-    throw new Error(`developer account load failed: ${developerRes.status}`);
+    throw new Error(`developer access load failed: ${developerRes.status}`);
   }
   const developer: Developer = await developerRes.json();
 
@@ -98,7 +97,8 @@ export default async function DashboardPage() {
 
       <h1 style={{ fontSize: 24, marginBottom: 12 }}>Developer console</h1>
       <p style={{ marginBottom: 24, color: "var(--text-secondary)" }}>
-        Manage the API keys and bucket scopes tied to your developer account.
+        Every user gets a developer identity. Manage your API keys and bucket
+        scopes here.
       </p>
 
       <div
@@ -117,13 +117,9 @@ export default async function DashboardPage() {
             background: "var(--bg-secondary)",
           }}
         >
-          <h2 style={{ fontSize: 18, marginBottom: 16 }}>{developer.name}</h2>
+          <h2 style={{ fontSize: 18, marginBottom: 16 }}>{me.email}</h2>
           <Row label="Email" value={me.email} />
-          <Row label="Public ID" value={<code>{developer.public_id}</code>} />
-          <Row
-            label="Status"
-            value={developer.is_frozen ? "frozen" : "active"}
-          />
+          <Row label="Developer ID" value={<code>{developer.public_id}</code>} />
           <Row label="Key count" value={String(keys.length)} />
           <Row
             label="Created"
@@ -137,7 +133,6 @@ export default async function DashboardPage() {
 
         <DeveloperConsoleActions
           developerPublicId={developer.public_id}
-          isFrozen={developer.is_frozen}
           keys={keysWithScopes}
         />
       </div>

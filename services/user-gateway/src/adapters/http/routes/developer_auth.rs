@@ -23,36 +23,35 @@ use crate::{
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/developers", get(list_developers).post(create_developer))
         .route("/developers/{id}", get(get_developer))
-        .route("/developers/{id}/freeze", post(freeze_developer))
-        .route("/developers/{id}/unfreeze", post(unfreeze_developer))
-        .route("/developers/{id}/keys", get(list_keys).post(create_key))
-        .route("/keys/{id}/revoke", post(revoke_key))
-        .route("/keys/{id}/rotate", post(rotate_key))
-        .route("/keys/{id}/scopes", get(list_scopes).post(create_scope))
-        .route("/scopes/{id}", delete(delete_scope))
+        .route("/users/{id}/developer", get(get_user_developer))
+        .route(
+            "/users/{id}/developer/keys",
+            get(list_user_keys).post(create_user_key),
+        )
+        .route(
+            "/users/{user_id}/developer/keys/{key_id}/revoke",
+            post(revoke_user_key),
+        )
+        .route(
+            "/users/{user_id}/developer/keys/{key_id}/rotate",
+            post(rotate_user_key),
+        )
+        .route(
+            "/users/{user_id}/developer/keys/{key_id}/scopes",
+            get(list_user_scopes).post(create_user_scope),
+        )
+        .route(
+            "/users/{user_id}/developer/scopes/{scope_id}",
+            delete(delete_user_scope),
+        )
         .route("/developer-auth/audit", get(list_audit))
 }
 
 #[derive(Deserialize)]
-struct ListQuery {
-    q: Option<String>,
+struct AuditQuery {
     limit: Option<i64>,
     offset: Option<i64>,
-}
-
-#[derive(Serialize)]
-struct ListDevelopersResponse {
-    developers: Vec<DeveloperAccount>,
-    total: i64,
-    limit: i64,
-    offset: i64,
-}
-
-#[derive(Deserialize)]
-struct CreateDeveloperRequest {
-    name: String,
 }
 
 #[derive(Deserialize)]
@@ -85,54 +84,6 @@ struct ListAuditResponse {
     offset: i64,
 }
 
-async fn list_developers(
-    AdminUser(_): AdminUser,
-    State(state): State<AppState>,
-    Query(query): Query<ListQuery>,
-) -> AppResult<Json<ListDevelopersResponse>> {
-    let limit = query.limit.unwrap_or(50).clamp(1, 200);
-    let offset = query.offset.unwrap_or(0).max(0);
-    let q = query.q.as_deref().filter(|value| !value.is_empty());
-    let developers = state
-        .developer_auth_repo
-        .list_developer_accounts(q, limit, offset)
-        .await?;
-    let total = state
-        .developer_auth_repo
-        .count_developer_accounts(q)
-        .await?;
-    Ok(Json(ListDevelopersResponse {
-        developers,
-        total,
-        limit,
-        offset,
-    }))
-}
-
-async fn create_developer(
-    AdminUser(admin): AdminUser,
-    State(state): State<AppState>,
-    Json(request): Json<CreateDeveloperRequest>,
-) -> AppResult<(StatusCode, Json<DeveloperAccount>)> {
-    let developer = state
-        .developer_auth_use_cases
-        .create_developer_account(&request.name)
-        .await?;
-    write_audit(
-        &state.developer_auth_repo,
-        &admin,
-        "developer_account.create",
-        Some(developer.id),
-        None,
-        json!({
-            "public_id": developer.public_id,
-            "name": developer.name,
-        }),
-    )
-    .await?;
-    Ok((StatusCode::CREATED, Json(developer)))
-}
-
 async fn get_developer(
     AdminUser(_): AdminUser,
     State(state): State<AppState>,
@@ -146,93 +97,46 @@ async fn get_developer(
     Ok(Json(developer))
 }
 
-async fn freeze_developer(
-    AdminUser(admin): AdminUser,
+async fn get_user_developer(
+    AdminUser(_): AdminUser,
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<DeveloperAccount>> {
-    let developer = state
-        .developer_auth_repo
-        .get_developer_account(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    state
-        .developer_auth_repo
-        .set_developer_account_frozen(id, true)
-        .await?;
-    write_audit(
-        &state.developer_auth_repo,
-        &admin,
-        "developer_account.freeze",
-        Some(id),
-        None,
-        json!({ "public_id": developer.public_id }),
-    )
-    .await?;
-    let updated = state
-        .developer_auth_repo
-        .get_developer_account(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    Ok(Json(updated))
+    let (_, developer) = user_with_developer(&state, id).await?;
+    Ok(Json(developer))
 }
 
-async fn unfreeze_developer(
-    AdminUser(admin): AdminUser,
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> AppResult<Json<DeveloperAccount>> {
-    let developer = state
-        .developer_auth_repo
-        .get_developer_account(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    state
-        .developer_auth_repo
-        .set_developer_account_frozen(id, false)
-        .await?;
-    write_audit(
-        &state.developer_auth_repo,
-        &admin,
-        "developer_account.unfreeze",
-        Some(id),
-        None,
-        json!({ "public_id": developer.public_id }),
-    )
-    .await?;
-    let updated = state
-        .developer_auth_repo
-        .get_developer_account(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    Ok(Json(updated))
-}
-
-async fn list_keys(
+async fn list_user_keys(
     AdminUser(_): AdminUser,
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<Vec<DeveloperApiKey>>> {
-    ensure_developer_exists(&state.developer_auth_repo, id).await?;
-    Ok(Json(state.developer_auth_repo.list_api_keys(id).await?))
+    let (_, developer) = user_with_developer(&state, id).await?;
+    Ok(Json(
+        state
+            .developer_auth_repo
+            .list_api_keys(developer.id)
+            .await?,
+    ))
 }
 
-async fn create_key(
+async fn create_user_key(
     AdminUser(admin): AdminUser,
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
     Json(request): Json<CreateKeyRequest>,
 ) -> AppResult<(StatusCode, Json<IssuedKeyResponse>)> {
-    let developer = ensure_developer_exists(&state.developer_auth_repo, id).await?;
+    let (user, developer) = user_with_developer(&state, id).await?;
+    ensure_user_developer_mutable(&user)?;
     let issued = state
         .developer_auth_use_cases
-        .issue_api_key(id, &request.name, request.expires_at)
+        .issue_api_key(developer.id, &request.name, request.expires_at)
         .await?;
     write_audit(
         &state.developer_auth_repo,
         &admin,
         "developer_api_key.create",
-        Some(id),
+        Some(developer.id),
         Some(issued.api_key.id),
         json!({
             "developer_public_id": developer.public_id,
@@ -250,23 +154,19 @@ async fn create_key(
     ))
 }
 
-async fn revoke_key(
+async fn revoke_user_key(
     AdminUser(admin): AdminUser,
     State(state): State<AppState>,
-    Path(id): Path<Uuid>,
+    Path((user_id, key_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<StatusCode> {
-    let key = state
-        .developer_auth_repo
-        .get_api_key(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    state.developer_auth_repo.revoke_api_key(id).await?;
+    let (_, developer, key) = user_api_key(&state, user_id, key_id).await?;
+    state.developer_auth_repo.revoke_api_key(key_id).await?;
     write_audit(
         &state.developer_auth_repo,
         &admin,
         "developer_api_key.revoke",
-        Some(key.developer_account_id),
-        Some(id),
+        Some(developer.id),
+        Some(key_id),
         json!({
             "key_name": key.name,
             "key_prefix": key.key_prefix,
@@ -276,25 +176,25 @@ async fn revoke_key(
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn rotate_key(
+async fn rotate_user_key(
     AdminUser(admin): AdminUser,
     State(state): State<AppState>,
-    Path(id): Path<Uuid>,
+    Path((user_id, key_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<(StatusCode, Json<IssuedKeyResponse>)> {
-    let current = state
-        .developer_auth_repo
-        .get_api_key(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    let issued = state.developer_auth_use_cases.rotate_api_key(id).await?;
+    let (user, developer, _) = user_api_key(&state, user_id, key_id).await?;
+    ensure_user_developer_mutable(&user)?;
+    let issued = state
+        .developer_auth_use_cases
+        .rotate_api_key(key_id)
+        .await?;
     write_audit(
         &state.developer_auth_repo,
         &admin,
         "developer_api_key.rotate",
-        Some(current.developer_account_id),
+        Some(developer.id),
         Some(issued.api_key.id),
         json!({
-            "rotated_from_api_key_id": id,
+            "rotated_from_api_key_id": key_id,
             "key_name": issued.api_key.name,
             "key_prefix": issued.api_key.key_prefix,
         }),
@@ -309,49 +209,28 @@ async fn rotate_key(
     ))
 }
 
-async fn list_scopes(
+async fn list_user_scopes(
     AdminUser(_): AdminUser,
     State(state): State<AppState>,
-    Path(id): Path<Uuid>,
+    Path((user_id, key_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<Json<Vec<DeveloperApiKeyScope>>> {
-    let _ = state
-        .developer_auth_repo
-        .get_api_key(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    Ok(Json(state.developer_auth_repo.list_scopes(id).await?))
+    let _ = user_api_key(&state, user_id, key_id).await?;
+    Ok(Json(state.developer_auth_repo.list_scopes(key_id).await?))
 }
 
-async fn create_scope(
+async fn create_user_scope(
     AdminUser(admin): AdminUser,
     State(state): State<AppState>,
-    Path(id): Path<Uuid>,
+    Path((user_id, key_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<CreateScopeRequest>,
 ) -> AppResult<(StatusCode, Json<DeveloperApiKeyScope>)> {
-    let key = state
-        .developer_auth_repo
-        .get_api_key(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    if !request.can_read && !request.can_write {
-        return Err(AppError::InvalidInput(
-            "scope must grant read or write".into(),
-        ));
-    }
-    if request.match_type != ScopeMatchType::All
-        && request
-            .bucket
-            .as_deref()
-            .is_none_or(|bucket| bucket.trim().is_empty())
-    {
-        return Err(AppError::InvalidInput(
-            "bucket is required for exact or prefix scopes".into(),
-        ));
-    }
+    let (user, developer, _) = user_api_key(&state, user_id, key_id).await?;
+    ensure_user_developer_mutable(&user)?;
+    validate_scope_request(&request)?;
     let scope = state
         .developer_auth_repo
         .create_scope(
-            id,
+            key_id,
             ScopeResourceType::Bucket,
             request.match_type,
             request.bucket.as_deref(),
@@ -363,8 +242,8 @@ async fn create_scope(
         &state.developer_auth_repo,
         &admin,
         "developer_api_key_scope.create",
-        Some(key.developer_account_id),
-        Some(id),
+        Some(developer.id),
+        Some(key_id),
         json!({
             "scope_id": scope.id,
             "match_type": scope.match_type,
@@ -377,30 +256,21 @@ async fn create_scope(
     Ok((StatusCode::CREATED, Json(scope)))
 }
 
-async fn delete_scope(
+async fn delete_user_scope(
     AdminUser(admin): AdminUser,
     State(state): State<AppState>,
-    Path(id): Path<Uuid>,
+    Path((user_id, scope_id)): Path<(Uuid, Uuid)>,
 ) -> AppResult<StatusCode> {
-    let scope = state
-        .developer_auth_repo
-        .get_scope(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    let key = state
-        .developer_auth_repo
-        .get_api_key(scope.api_key_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    state.developer_auth_repo.delete_scope(id).await?;
+    let (_, developer, scope) = user_scope(&state, user_id, scope_id).await?;
+    state.developer_auth_repo.delete_scope(scope_id).await?;
     write_audit(
         &state.developer_auth_repo,
         &admin,
         "developer_api_key_scope.delete",
-        Some(key.developer_account_id),
+        Some(developer.id),
         Some(scope.api_key_id),
         json!({
-            "scope_id": id,
+            "scope_id": scope_id,
             "match_type": scope.match_type,
             "bucket": scope.resource_value,
         }),
@@ -412,7 +282,7 @@ async fn delete_scope(
 async fn list_audit(
     AdminUser(_): AdminUser,
     State(state): State<AppState>,
-    Query(query): Query<ListQuery>,
+    Query(query): Query<AuditQuery>,
 ) -> AppResult<Json<ListAuditResponse>> {
     let limit = query.limit.unwrap_or(50).clamp(1, 200);
     let offset = query.offset.unwrap_or(0).max(0);
@@ -432,13 +302,82 @@ async fn list_audit(
     }))
 }
 
-async fn ensure_developer_exists(
-    repo: &Arc<dyn DeveloperAuthRepo>,
-    developer_id: Uuid,
-) -> AppResult<DeveloperAccount> {
-    repo.get_developer_account(developer_id)
+async fn user_with_developer(
+    state: &AppState,
+    user_id: Uuid,
+) -> AppResult<(UserProfile, DeveloperAccount)> {
+    let user = state
+        .user_repo
+        .get_profile_by_id(user_id)
         .await?
-        .ok_or(AppError::NotFound)
+        .ok_or(AppError::NotFound)?;
+    state
+        .developer_auth_use_cases
+        .ensure_owned_developer_account(user.id, &user.email)
+        .await?;
+    let developer = state
+        .developer_auth_repo
+        .get_developer_account_by_owner_user_id(user.id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    Ok((user, developer))
+}
+
+async fn user_api_key(
+    state: &AppState,
+    user_id: Uuid,
+    api_key_id: Uuid,
+) -> AppResult<(UserProfile, DeveloperAccount, DeveloperApiKey)> {
+    let (user, developer) = user_with_developer(state, user_id).await?;
+    let key = state
+        .developer_auth_repo
+        .get_api_key(api_key_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    if key.developer_account_id != developer.id {
+        return Err(AppError::NotFound);
+    }
+    Ok((user, developer, key))
+}
+
+async fn user_scope(
+    state: &AppState,
+    user_id: Uuid,
+    scope_id: Uuid,
+) -> AppResult<(UserProfile, DeveloperAccount, DeveloperApiKeyScope)> {
+    let scope = state
+        .developer_auth_repo
+        .get_scope(scope_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let (user, developer, _) = user_api_key(state, user_id, scope.api_key_id).await?;
+    Ok((user, developer, scope))
+}
+
+fn ensure_user_developer_mutable(user: &UserProfile) -> AppResult<()> {
+    if user.is_frozen {
+        return Err(AppError::Conflict("user account is frozen".into()));
+    }
+    Ok(())
+}
+
+fn validate_scope_request(request: &CreateScopeRequest) -> AppResult<()> {
+    if !request.can_read && !request.can_write {
+        return Err(AppError::InvalidInput(
+            "scope must grant read or write".into(),
+        ));
+    }
+    if request.match_type != ScopeMatchType::All
+        && request
+            .bucket
+            .as_deref()
+            .is_none_or(|bucket| bucket.trim().is_empty())
+    {
+        return Err(AppError::InvalidInput(
+            "bucket is required for exact or prefix scopes".into(),
+        ));
+    }
+    Ok(())
 }
 
 async fn write_audit(

@@ -29,7 +29,7 @@ export default async function DashboardPage() {
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>Dashboard</h1>
       <p style={{ fontSize: 15, marginBottom: 24 }}>
         Hello, <strong>{me.email}</strong>. You are{" "}
-        {me.is_admin ? "an admin" : "a regular user"}.
+        {me.is_admin ? "an admin" : "a developer"}.
       </p>
 
       <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 24 }}>

@@ -176,28 +176,6 @@ impl From<DeveloperAuthAuditRow> for DeveloperAuthAuditEntry {
 
 #[async_trait]
 impl DeveloperAuthRepo for PostgresPersistence {
-    async fn create_developer_account(
-        &self,
-        public_id: &str,
-        name: &str,
-    ) -> AppResult<DeveloperAccount> {
-        let row = sqlx::query_as::<_, DeveloperAccountRow>(
-            r#"
-                INSERT INTO developer_accounts (id, public_id, name)
-                VALUES ($1, $2, $3)
-                RETURNING id, public_id, name, owner_user_id, NULL::TEXT AS owner_email,
-                          is_frozen, created_at, updated_at
-            "#,
-        )
-        .bind(Uuid::new_v4())
-        .bind(public_id)
-        .bind(name)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(AppError::from)?;
-        Ok(row.into())
-    }
-
     async fn create_owned_developer_account(
         &self,
         owner_user_id: Uuid,
@@ -206,10 +184,22 @@ impl DeveloperAuthRepo for PostgresPersistence {
     ) -> AppResult<DeveloperAccount> {
         let row = sqlx::query_as::<_, DeveloperAccountRow>(
             r#"
-                INSERT INTO developer_accounts (id, public_id, name, owner_user_id)
-                VALUES ($1, $2, $3, $4)
-                RETURNING id, public_id, name, owner_user_id, NULL::TEXT AS owner_email,
-                          is_frozen, created_at, updated_at
+                WITH inserted AS (
+                    INSERT INTO developer_accounts (id, public_id, name, owner_user_id)
+                    VALUES ($1, $2, $3, $4)
+                    RETURNING id, public_id, name, owner_user_id, created_at, updated_at
+                )
+                SELECT
+                    i.id,
+                    i.public_id,
+                    i.name,
+                    i.owner_user_id,
+                    u.email AS owner_email,
+                    u.is_frozen AS is_frozen,
+                    i.created_at,
+                    i.updated_at
+                FROM inserted i
+                INNER JOIN users u ON u.id = i.owner_user_id
             "#,
         )
         .bind(Uuid::new_v4())
@@ -222,65 +212,6 @@ impl DeveloperAuthRepo for PostgresPersistence {
         Ok(row.into())
     }
 
-    async fn list_developer_accounts(
-        &self,
-        query: Option<&str>,
-        limit: i64,
-        offset: i64,
-    ) -> AppResult<Vec<DeveloperAccount>> {
-        let pattern = query
-            .map(|q| format!("%{}%", q.trim().to_lowercase()))
-            .unwrap_or_else(|| "%".to_string());
-        let rows = sqlx::query_as::<_, DeveloperAccountRow>(
-            r#"
-                SELECT
-                    a.id,
-                    a.public_id,
-                    a.name,
-                    a.owner_user_id,
-                    u.email AS owner_email,
-                    a.is_frozen,
-                    a.created_at,
-                    a.updated_at
-                FROM developer_accounts a
-                LEFT JOIN users u ON u.id = a.owner_user_id
-                WHERE LOWER(a.public_id) LIKE $1
-                   OR LOWER(a.name) LIKE $1
-                   OR LOWER(COALESCE(u.email, '')) LIKE $1
-                ORDER BY a.created_at DESC
-                LIMIT $2 OFFSET $3
-            "#,
-        )
-        .bind(pattern)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(AppError::from)?;
-        Ok(rows.into_iter().map(Into::into).collect())
-    }
-
-    async fn count_developer_accounts(&self, query: Option<&str>) -> AppResult<i64> {
-        let pattern = query
-            .map(|q| format!("%{}%", q.trim().to_lowercase()))
-            .unwrap_or_else(|| "%".to_string());
-        let count: i64 = sqlx::query_scalar(
-            r#"
-                SELECT COUNT(*)
-                FROM developer_accounts a
-                LEFT JOIN users u ON u.id = a.owner_user_id
-                WHERE LOWER(a.public_id) LIKE $1
-                   OR LOWER(a.name) LIKE $1
-                   OR LOWER(COALESCE(u.email, '')) LIKE $1
-            "#,
-        )
-        .bind(pattern)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(AppError::from)?;
-        Ok(count)
-    }
-
     async fn get_developer_account(&self, account_id: Uuid) -> AppResult<Option<DeveloperAccount>> {
         let row = sqlx::query_as::<_, DeveloperAccountRow>(
             r#"
@@ -290,11 +221,11 @@ impl DeveloperAuthRepo for PostgresPersistence {
                     a.name,
                     a.owner_user_id,
                     u.email AS owner_email,
-                    a.is_frozen,
+                    u.is_frozen AS is_frozen,
                     a.created_at,
                     a.updated_at
                 FROM developer_accounts a
-                LEFT JOIN users u ON u.id = a.owner_user_id
+                INNER JOIN users u ON u.id = a.owner_user_id
                 WHERE a.id = $1
             "#,
         )
@@ -317,11 +248,11 @@ impl DeveloperAuthRepo for PostgresPersistence {
                     a.name,
                     a.owner_user_id,
                     u.email AS owner_email,
-                    a.is_frozen,
+                    u.is_frozen AS is_frozen,
                     a.created_at,
                     a.updated_at
                 FROM developer_accounts a
-                LEFT JOIN users u ON u.id = a.owner_user_id
+                INNER JOIN users u ON u.id = a.owner_user_id
                 WHERE a.public_id = $1
             "#,
         )
@@ -344,11 +275,11 @@ impl DeveloperAuthRepo for PostgresPersistence {
                     a.name,
                     a.owner_user_id,
                     u.email AS owner_email,
-                    a.is_frozen,
+                    u.is_frozen AS is_frozen,
                     a.created_at,
                     a.updated_at
                 FROM developer_accounts a
-                LEFT JOIN users u ON u.id = a.owner_user_id
+                INNER JOIN users u ON u.id = a.owner_user_id
                 WHERE a.owner_user_id = $1
             "#,
         )
@@ -357,20 +288,6 @@ impl DeveloperAuthRepo for PostgresPersistence {
         .await
         .map_err(AppError::from)?;
         Ok(row.map(Into::into))
-    }
-
-    async fn set_developer_account_frozen(
-        &self,
-        account_id: Uuid,
-        is_frozen: bool,
-    ) -> AppResult<()> {
-        sqlx::query("UPDATE developer_accounts SET is_frozen = $2 WHERE id = $1")
-            .bind(account_id)
-            .bind(is_frozen)
-            .execute(&self.pool)
-            .await
-            .map_err(AppError::from)?;
-        Ok(())
     }
 
     async fn create_api_key(
@@ -452,12 +369,12 @@ impl DeveloperAuthRepo for PostgresPersistence {
                     a.name AS account_name,
                     a.owner_user_id AS account_owner_user_id,
                     u.email AS account_owner_email,
-                    a.is_frozen AS account_is_frozen,
+                    u.is_frozen AS account_is_frozen,
                     a.created_at AS account_created_at,
                     a.updated_at AS account_updated_at
                 FROM developer_api_keys k
                 INNER JOIN developer_accounts a ON a.id = k.developer_account_id
-                LEFT JOIN users u ON u.id = a.owner_user_id
+                INNER JOIN users u ON u.id = a.owner_user_id
                 WHERE k.key_hash = $1
             "#,
         )

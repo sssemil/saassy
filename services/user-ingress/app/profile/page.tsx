@@ -32,7 +32,7 @@ export default async function ProfilePage() {
         }}
       >
         <Row label="Email" value={me.email} />
-        <Row label="Role" value={me.is_admin ? "Admin" : "User"} />
+        <Row label="Role" value={me.is_admin ? "Admin" : "Developer"} />
         <Row
           label="User ID"
           value={<code style={{ fontSize: 12 }}>{me.id}</code>}
