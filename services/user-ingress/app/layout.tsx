@@ -1,17 +1,21 @@
+import type { CSSProperties } from "react";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-jetbrains-mono",
 });
+
+const bodyStyle = {
+  "--font-sans": `${inter.style.fontFamily}, "SF Pro Display", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif`,
+  "--font-mono": `${jetbrainsMono.style.fontFamily}, "JetBrains Mono", "SF Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace`,
+} as CSSProperties;
 
 export const metadata = {
   title: "Sign in",
@@ -25,7 +29,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body style={bodyStyle}>
         {children}
       </body>
     </html>

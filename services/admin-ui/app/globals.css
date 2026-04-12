@@ -27,12 +27,10 @@
   --shadow-soft: 0 20px 80px rgba(0, 0, 0, 0.45);
   --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.32);
   --font-sans:
-    var(--font-inter), "Inter", "SF Pro Display", "Segoe UI", -apple-system,
-    BlinkMacSystemFont,
+    "Inter", "SF Pro Display", "Segoe UI", -apple-system, BlinkMacSystemFont,
     "Helvetica Neue", sans-serif;
   --font-mono:
-    var(--font-jetbrains-mono), "JetBrains Mono", "SF Mono", "SFMono-Regular",
-    Consolas,
+    "JetBrains Mono", "SF Mono", "SFMono-Regular", Consolas,
     "Liberation Mono", monospace;
 }
 
