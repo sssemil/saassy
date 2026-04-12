@@ -413,10 +413,38 @@ form {
   color: var(--secondary);
 }
 
+.admin-shell {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 30%),
+    radial-gradient(circle at top right, rgba(52, 211, 153, 0.12), transparent 22%),
+    linear-gradient(180deg, var(--background) 0%, #0c0d13 38%, var(--background-deep) 100%);
+}
+
+.admin-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 18%);
+}
+
+.admin-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
 .page-shell {
   width: min(1200px, calc(100% - 2.5rem));
   margin: 0 auto;
   padding: 1.5rem 0 4rem;
+}
+
+.admin-main {
+  min-height: calc(100vh - 5rem);
 }
 
 .page-shell-narrow {

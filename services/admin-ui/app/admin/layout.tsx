@@ -22,9 +22,9 @@ export default async function AdminLayout({
   const admin = await res.json();
 
   return (
-    <>
+    <div className="admin-shell">
       <AdminNav adminEmail={admin.email} />
-      <main className="page-shell">{children}</main>
-    </>
+      <main className="page-shell admin-main">{children}</main>
+    </div>
   );
 }
