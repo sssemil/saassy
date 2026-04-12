@@ -32,30 +32,11 @@ export default function DeleteAccountButton() {
   }
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={del}
-        disabled={busy}
-        style={{
-          padding: "8px 14px",
-          background: "var(--accent-red)",
-          color: "#000",
-          border: "none",
-          borderRadius: 4,
-          fontFamily: "var(--font-mono)",
-          fontSize: 13,
-          cursor: busy ? "wait" : "pointer",
-          opacity: busy ? 0.6 : 1,
-        }}
-      >
+    <div className="stack">
+      <button type="button" onClick={del} disabled={busy} className="button-danger">
         {busy ? "Deleting…" : "Delete my account"}
       </button>
-      {error && (
-        <p style={{ marginTop: 12, color: "var(--text-error)", fontSize: 13 }}>
-          Error: {error}
-        </p>
-      )}
-    </>
+      {error && <p className="small text-danger">Error: {error}</p>}
+    </div>
   );
 }

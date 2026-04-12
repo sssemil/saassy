@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
-import { serverApiFetch } from "../lib/api-fetch";
+
 import AdminNav from "./_components/AdminNav";
+import { serverApiFetch } from "../lib/api-fetch";
 
 export const metadata = {
   title: "Admin",
@@ -21,21 +22,9 @@ export default async function AdminLayout({
   const admin = await res.json();
 
   return (
-    <div
-      style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
-    >
+    <>
       <AdminNav adminEmail={admin.email} />
-      <main
-        style={{
-          flex: 1,
-          padding: 24,
-          maxWidth: 1200,
-          margin: "0 auto",
-          width: "100%",
-        }}
-      >
-        {children}
-      </main>
-    </div>
+      <main className="page-shell">{children}</main>
+    </>
   );
 }

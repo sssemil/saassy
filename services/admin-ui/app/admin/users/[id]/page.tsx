@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { serverApiFetch } from "../../../lib/api-fetch";
@@ -21,7 +22,6 @@ type Developer = {
   name: string;
   owner_user_id: string | null;
   owner_email: string | null;
-  is_frozen: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -83,79 +83,94 @@ export default async function UserDetailPage({
   );
 
   return (
-    <div>
-      <a
-        href="/admin/users"
-        style={{
-          color: "var(--text-link)",
-          textDecoration: "none",
-          fontSize: 13,
-        }}
-      >
-        ← Back to users
-      </a>
-      <h1 style={{ fontSize: 22, margin: "12px 0 24px" }}>{user.email}</h1>
+    <div className="stack-lg">
+      <div className="inline-links">
+        <Link href="/admin/users" className="pill-link">
+          Back to users
+        </Link>
+      </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(280px, 360px) 1fr",
-          gap: 24,
-          alignItems: "start",
-        }}
-      >
-        <div style={{ display: "grid", gap: 20 }}>
-          <section
-            style={{
-              padding: 20,
-              border: "1px solid var(--border-primary)",
-              borderRadius: 4,
-              background: "var(--bg-secondary)",
-            }}
-          >
-            <Row label="ID" value={<code>{user.id}</code>} />
-            <Row label="Email" value={user.email} />
-            <Row label="Language" value={user.language} />
-            <Row label="Admin" value={user.is_admin ? "yes" : "no"} />
-            <Row label="Frozen" value={user.is_frozen ? "yes" : "no"} />
-            <Row
-              label="User created"
-              value={new Date(user.created_at).toLocaleString()}
-            />
-            <Row
-              label="User updated"
-              value={new Date(user.updated_at).toLocaleString()}
-            />
-            <Row
-              label="Last login"
-              value={
-                user.last_login_at
-                  ? new Date(user.last_login_at).toLocaleString()
-                  : "—"
-              }
-            />
-            <Row label="Developer ID" value={<code>{developer.public_id}</code>} />
-            <Row
-              label="API access"
-              value={developer.is_frozen ? "frozen" : "active"}
-            />
-            <Row label="API keys" value={String(keys.length)} />
-            <Row
-              label="Developer created"
-              value={new Date(developer.created_at).toLocaleString()}
-            />
-            <Row
-              label="Developer updated"
-              value={new Date(developer.updated_at).toLocaleString()}
-            />
+      <section className="surface hero-surface">
+        <div className="page-header">
+          <div className="page-heading">
+            <span className="eyebrow">User detail</span>
+            <h1>{user.email}</h1>
+            <p className="page-subtitle">
+              Manage account state, impersonation, and developer API access from
+              one view.
+            </p>
+          </div>
+          <div className="header-actions">
+            {user.is_admin && <span className="badge badge-primary">admin</span>}
+            <span
+              className={`badge ${
+                user.is_frozen ? "badge-warning" : "badge-success"
+              }`}
+            >
+              {user.is_frozen ? "frozen" : "active"}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid-sidebar">
+        <div className="stack-lg">
+          <section className="surface">
+            <div className="section-header">
+              <div className="stack">
+                <h2 className="section-title">Account summary</h2>
+                <p className="section-copy">
+                  Core user metadata and the attached developer identity.
+                </p>
+              </div>
+            </div>
+            <div className="meta-list">
+              <Row label="ID" value={<code>{user.id}</code>} />
+              <Row label="Email" value={user.email} />
+              <Row label="Language" value={user.language} />
+              <Row label="Admin" value={user.is_admin ? "yes" : "no"} />
+              <Row label="Frozen" value={user.is_frozen ? "yes" : "no"} />
+              <Row
+                label="User created"
+                value={new Date(user.created_at).toLocaleString()}
+              />
+              <Row
+                label="User updated"
+                value={new Date(user.updated_at).toLocaleString()}
+              />
+              <Row
+                label="Last login"
+                value={
+                  user.last_login_at
+                    ? new Date(user.last_login_at).toLocaleString()
+                    : "—"
+                }
+              />
+              <Row label="Developer ID" value={<code>{developer.public_id}</code>} />
+              <Row
+                label="API access"
+                value={user.is_frozen ? "frozen" : "active"}
+              />
+              <Row label="API keys" value={String(keys.length)} />
+              <Row
+                label="Developer created"
+                value={new Date(developer.created_at).toLocaleString()}
+              />
+              <Row
+                label="Developer updated"
+                value={new Date(developer.updated_at).toLocaleString()}
+              />
+            </div>
           </section>
 
-          <UserActions
-            userId={user.id}
-            userEmail={user.email}
-            isAdmin={user.is_admin}
-            isFrozen={user.is_frozen}
-          />
+          <section className="surface">
+            <UserActions
+              userId={user.id}
+              userEmail={user.email}
+              isAdmin={user.is_admin}
+              isFrozen={user.is_frozen}
+            />
+          </section>
         </div>
 
         <DeveloperAccessSection
@@ -171,17 +186,9 @@ export default async function UserDetailPage({
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        padding: "6px 0",
-        borderBottom: "1px solid var(--border-primary)",
-      }}
-    >
-      <div style={{ width: 140, color: "var(--text-muted)", fontSize: 13 }}>
-        {label}
-      </div>
-      <div style={{ flex: 1, fontSize: 13 }}>{value}</div>
+    <div className="meta-row">
+      <div className="meta-label">{label}</div>
+      <div className="meta-value">{value}</div>
     </div>
   );
 }

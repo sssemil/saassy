@@ -18,58 +18,33 @@ export default function AdminNav({ adminEmail }: { adminEmail: string }) {
   }
 
   return (
-    <nav
-      style={{
-        borderBottom: "1px solid var(--border-primary)",
-        background: "var(--bg-secondary)",
-        padding: "12px 24px",
-        display: "flex",
-        alignItems: "center",
-        gap: 16,
-      }}
-    >
-      <strong style={{ marginRight: 16 }}>Admin</strong>
-      {LINKS.map((l) => {
-        const active =
-          l.href === "/admin"
-            ? pathname === "/admin"
-            : pathname.startsWith(l.href);
-        return (
-          <Link
-            key={l.href}
-            href={l.href}
-            style={{
-              color: active ? "var(--text-primary)" : "var(--text-secondary)",
-              textDecoration: "none",
-              padding: "4px 8px",
-              borderBottom: active
-                ? "2px solid var(--accent-blue)"
-                : "2px solid transparent",
-            }}
-          >
-            {l.label}
-          </Link>
-        );
-      })}
-      <span style={{ flex: 1 }} />
-      <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
-        {adminEmail}
-      </span>
-      <button
-        onClick={logout}
-        style={{
-          background: "transparent",
-          border: "1px solid var(--border-primary)",
-          color: "var(--text-secondary)",
-          padding: "4px 10px",
-          borderRadius: 4,
-          cursor: "pointer",
-          fontFamily: "var(--font-mono)",
-          fontSize: 13,
-        }}
-      >
-        Sign out
-      </button>
+    <nav className="topbar-shell">
+      <div className="topbar">
+        <Link href="/admin" className="topbar-brand">
+          Shardd Admin
+        </Link>
+        {LINKS.map((l) => {
+          const active =
+            l.href === "/admin"
+              ? pathname === "/admin"
+              : pathname.startsWith(l.href);
+          return (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`pill-link${active ? " active" : ""}`}
+            >
+              {l.label}
+            </Link>
+          );
+        })}
+        <div className="topbar-meta">
+          <span className="badge badge-neutral">{adminEmail}</span>
+          <button type="button" onClick={logout} className="button-secondary">
+            Sign out
+          </button>
+        </div>
+      </div>
     </nav>
   );
 }

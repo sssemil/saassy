@@ -1,4 +1,5 @@
 import Link from "next/link";
+
 import { serverApiFetch } from "../../lib/api-fetch";
 
 type Entry = {
@@ -38,122 +39,95 @@ export default async function AuditPage({
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
 
   return (
-    <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Audit log</h1>
+    <div className="stack-lg">
+      <section className="surface hero-surface">
+        <div className="page-header">
+          <div className="page-heading">
+            <span className="eyebrow">Governance</span>
+            <h1>Audit log</h1>
+            <p className="page-subtitle">
+              Review privileged actions taken by admins across user and
+              developer access controls.
+            </p>
+          </div>
+          <div className="header-actions">
+            <span className="badge badge-neutral">
+              {data.total.toLocaleString()} entries
+            </span>
+          </div>
+        </div>
+      </section>
 
-      <div
-        style={{
-          border: "1px solid var(--border-primary)",
-          borderRadius: 4,
-          overflow: "hidden",
-          background: "var(--bg-secondary)",
-        }}
-      >
-        <table
-          style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}
-        >
-          <thead>
-            <tr style={{ background: "var(--bg-tertiary)", textAlign: "left" }}>
-              <th style={th}>When</th>
-              <th style={th}>Admin</th>
-              <th style={th}>Action</th>
-              <th style={th}>Target</th>
-              <th style={th}>Metadata</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.entries.length === 0 ? (
+      <section className="surface table-card">
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td
-                  colSpan={5}
-                  style={{
-                    padding: 20,
-                    textAlign: "center",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  No audit entries yet.
-                </td>
+                <th>When</th>
+                <th>Admin</th>
+                <th>Action</th>
+                <th>Target</th>
+                <th>Metadata</th>
               </tr>
-            ) : (
-              data.entries.map((e) => (
-                <tr
-                  key={e.id}
-                  style={{ borderTop: "1px solid var(--border-primary)" }}
-                >
-                  <td style={td}>{new Date(e.created_at).toLocaleString()}</td>
-                  <td style={td}>{e.admin_email}</td>
-                  <td style={td}>
-                    <code>{e.action}</code>
-                  </td>
-                  <td style={td}>
-                    {e.target_user_id ? (
-                      <Link
-                        href={`/admin/users/${e.target_user_id}`}
-                        style={{
-                          color: "var(--text-link)",
-                          textDecoration: "none",
-                        }}
-                      >
-                        {e.target_email || e.target_user_id}
-                      </Link>
-                    ) : (
-                      e.target_email || "—"
-                    )}
-                  </td>
-                  <td style={td}>
-                    <code style={{ color: "var(--text-muted)" }}>
-                      {Object.keys(e.metadata).length > 0
-                        ? JSON.stringify(e.metadata)
-                        : "—"}
-                    </code>
+            </thead>
+            <tbody>
+              {data.entries.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="table-empty">
+                    No audit entries yet.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                data.entries.map((entry) => (
+                  <tr key={entry.id}>
+                    <td>{new Date(entry.created_at).toLocaleString()}</td>
+                    <td>{entry.admin_email}</td>
+                    <td>
+                      <code>{entry.action}</code>
+                    </td>
+                    <td>
+                      {entry.target_user_id ? (
+                        <Link
+                          href={`/admin/users/${entry.target_user_id}`}
+                          className="link-inline"
+                        >
+                          {entry.target_email || entry.target_user_id}
+                        </Link>
+                      ) : (
+                        entry.target_email || "—"
+                      )}
+                    </td>
+                    <td>
+                      <code className="code-block-inline">
+                        {Object.keys(entry.metadata).length > 0
+                          ? JSON.stringify(entry.metadata)
+                          : "—"}
+                      </code>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      <div
-        style={{
-          marginTop: 12,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          fontSize: 13,
-          color: "var(--text-muted)",
-        }}
-      >
+      <div className="pagination">
         <span>
           {data.total.toLocaleString()} entries · page {page} / {totalPages}
         </span>
-        <span style={{ flex: 1 }} />
+        <span className="spacer" />
         {page > 1 && (
-          <Link href={`?page=${page - 1}`} style={pageLink}>
-            ← Prev
+          <Link href={`?page=${page - 1}`} className="pill-link">
+            Prev
           </Link>
         )}
         {page < totalPages && (
-          <Link href={`?page=${page + 1}`} style={pageLink}>
-            Next →
+          <Link href={`?page=${page + 1}`} className="pill-link">
+            Next
           </Link>
         )}
       </div>
     </div>
   );
 }
-
-const th: React.CSSProperties = {
-  padding: "10px 12px",
-  fontWeight: 600,
-  color: "var(--text-secondary)",
-};
-const td: React.CSSProperties = { padding: "8px 12px", verticalAlign: "top" };
-const pageLink: React.CSSProperties = {
-  color: "var(--text-link)",
-  textDecoration: "none",
-  padding: "4px 10px",
-  border: "1px solid var(--border-primary)",
-  borderRadius: 4,
-};

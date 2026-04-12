@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 type Scope = {
@@ -32,6 +33,7 @@ export default function DeveloperConsoleActions({
   developerPublicId: string;
   keys: KeyWithScopes[];
 }) {
+  const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newKeyName, setNewKeyName] = useState("");
@@ -80,23 +82,28 @@ export default function DeveloperConsoleActions({
         `Copy the new API key for ${developerPublicId}. It will not be shown again.`,
         issued.raw_key,
       );
-      window.location.reload();
+      router.refresh();
     });
 
   return (
-    <div style={{ display: "grid", gap: 20 }}>
-      <section style={card}>
-        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Issue API key</h2>
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            flexWrap: "wrap",
-            alignItems: "flex-start",
-          }}
-        >
-          <div style={{ minWidth: 280, flex: 1 }}>
+    <div className="stack-lg">
+      <section className="surface">
+        <div className="section-header">
+          <div className="stack">
+            <h2 className="section-title">Issue API key</h2>
+            <p className="section-copy">
+              Create a fresh credential for scripts, workers, or local
+              development.
+            </p>
+          </div>
+        </div>
+        <div className="search-form">
+          <div className="field-grow">
+            <label className="label" htmlFor="new-key-name">
+              Key name
+            </label>
             <input
+              id="new-key-name"
               type="text"
               value={newKeyName}
               onChange={(e) => setNewKeyName(e.target.value)}
@@ -104,18 +111,31 @@ export default function DeveloperConsoleActions({
               disabled={busy !== null}
             />
           </div>
-          <Btn onClick={createKey} busy={busy === "create-key"}>
+          <Btn
+            onClick={createKey}
+            busy={busy === "create-key"}
+            busyLabel="Creating…"
+            variant="primary"
+          >
             Create key
           </Btn>
         </div>
       </section>
 
-      <section style={card}>
-        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Keys and scopes</h2>
+      <section className="surface">
+        <div className="section-header">
+          <div className="stack">
+            <h2 className="section-title">Keys and scopes</h2>
+            <p className="section-copy">
+              Rotate credentials, revoke compromised keys, and control bucket
+              access patterns.
+            </p>
+          </div>
+        </div>
         {keys.length === 0 ? (
-          <p style={{ color: "var(--text-muted)" }}>No API keys issued yet.</p>
+          <div className="empty-state">No API keys issued yet.</div>
         ) : (
-          <div style={{ display: "grid", gap: 16 }}>
+          <div className="stack">
             {keys.map((entry) => (
               <KeyCard
                 key={entry.key.id}
@@ -124,13 +144,19 @@ export default function DeveloperConsoleActions({
                 busy={busy}
                 onAction={runAction}
                 onCall={call}
+                onRefresh={() => router.refresh()}
               />
             ))}
           </div>
         )}
       </section>
 
-      {error && <p style={{ color: "var(--text-error)" }}>Error: {error}</p>}
+      {error && (
+        <div className="notice notice-danger">
+          <span className="notice-title">Action failed</span>
+          <p className="notice-copy">{error}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -141,12 +167,14 @@ function KeyCard({
   busy,
   onAction,
   onCall,
+  onRefresh,
 }: {
   developerPublicId: string;
   entry: KeyWithScopes;
   busy: string | null;
   onAction: (name: string, fn: () => Promise<void>) => Promise<void>;
   onCall: (path: string, method: string, body?: unknown) => Promise<Response>;
+  onRefresh: () => void;
 }) {
   const [matchType, setMatchType] = useState<"all" | "exact" | "prefix">("all");
   const [bucket, setBucket] = useState("");
@@ -158,8 +186,9 @@ function KeyCard({
     if (
       entry.key.expires_at &&
       new Date(entry.key.expires_at).getTime() < Date.now()
-    )
+    ) {
       return "expired";
+    }
     return "active";
   }, [entry.key.expires_at, entry.key.revoked_at]);
 
@@ -167,7 +196,7 @@ function KeyCard({
     onAction(`revoke-${entry.key.id}`, async () => {
       if (!confirm(`Revoke key ${entry.key.name}?`)) return;
       await onCall(`/api/developer/keys/${entry.key.id}/revoke`, "POST");
-      window.location.reload();
+      onRefresh();
     });
 
   const rotate = () =>
@@ -178,7 +207,7 @@ function KeyCard({
         `Copy the rotated API key for ${developerPublicId}. It will not be shown again.`,
         issued.raw_key,
       );
-      window.location.reload();
+      onRefresh();
     });
 
   const createScope = () =>
@@ -196,73 +225,41 @@ function KeyCard({
       setCanRead(true);
       setCanWrite(false);
       setMatchType("all");
-      window.location.reload();
+      onRefresh();
     });
 
   const deleteScope = (scopeId: string) =>
     onAction(`delete-scope-${scopeId}`, async () => {
       if (!confirm("Delete this scope?")) return;
       await onCall(`/api/developer/scopes/${scopeId}`, "DELETE");
-      window.location.reload();
+      onRefresh();
     });
 
   const mutationsDisabled = status !== "active";
 
   return (
-    <div
-      style={{
-        border: "1px solid var(--border-primary)",
-        borderRadius: 4,
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
+    <article className="panel stack">
+      <div className="split-row">
+        <div className="stack">
+          <div className="action-row">
             <strong>{entry.key.name}</strong>
-            <Tag
-              color={
-                status === "active"
-                  ? "var(--accent-green)"
-                  : "var(--accent-orange)"
-              }
-            >
+            <Tag variant={status === "active" ? "success" : "warning"}>
               {status}
             </Tag>
             <code>{entry.key.key_prefix}</code>
           </div>
-          <p
-            style={{
-              marginTop: 6,
-              marginBottom: 0,
-              color: "var(--text-muted)",
-              fontSize: 12,
-            }}
-          >
+          <p className="small muted">
             Last used:{" "}
             {entry.key.last_used_at
               ? new Date(entry.key.last_used_at).toLocaleString()
               : "never"}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="action-row">
           <Btn
             onClick={rotate}
             busy={busy === `rotate-${entry.key.id}`}
+            busyLabel="Rotating…"
             disabled={mutationsDisabled}
           >
             Rotate
@@ -270,108 +267,88 @@ function KeyCard({
           <Btn
             onClick={revoke}
             busy={busy === `revoke-${entry.key.id}`}
+            busyLabel="Revoking…"
             disabled={mutationsDisabled}
-            color="var(--accent-red)"
+            variant="danger"
           >
             Revoke
           </Btn>
         </div>
       </div>
 
-      <div style={{ marginTop: 16 }}>
-        <h3 style={{ fontSize: 14, marginBottom: 10 }}>Scopes</h3>
-        {entry.scopes.length === 0 ? (
-          <p style={{ color: "var(--text-muted)", marginBottom: 12 }}>
-            No scopes attached.
-          </p>
-        ) : (
-          <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
-            {entry.scopes.map((scope) => (
-              <div
-                key={scope.id}
-                style={{
-                  border: "1px solid var(--border-primary)",
-                  borderRadius: 4,
-                  padding: 10,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  flexWrap: "wrap",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      flexWrap: "wrap",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Tag color="var(--accent-blue)">{scope.match_type}</Tag>
-                    <code>{scope.resource_value || "*"}</code>
-                  </div>
-                  <p
-                    style={{
-                      marginTop: 6,
-                      marginBottom: 0,
-                      color: "var(--text-muted)",
-                      fontSize: 12,
-                    }}
-                  >
-                    {scope.can_read ? "read" : "no-read"} ·{" "}
-                    {scope.can_write ? "write" : "no-write"}
-                  </p>
-                </div>
-                <Btn
-                  onClick={() => deleteScope(scope.id)}
-                  busy={busy === `delete-scope-${scope.id}`}
-                  disabled={status !== "active"}
-                  color="var(--accent-red)"
-                >
-                  Delete scope
-                </Btn>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="divider" />
 
-        <div style={{ display: "grid", gap: 8 }}>
-          <div
-            style={{
-              display: "grid",
-              gap: 8,
-              gridTemplateColumns: "160px 1fr",
-              alignItems: "center",
-            }}
-          >
-            <select
-              value={matchType}
-              onChange={(e) =>
-                setMatchType(e.target.value as "all" | "exact" | "prefix")
-              }
-            >
-              <option value="all">all buckets</option>
-              <option value="exact">exact bucket</option>
-              <option value="prefix">bucket prefix</option>
-            </select>
-            <input
-              type="text"
-              value={bucket}
-              onChange={(e) => setBucket(e.target.value)}
-              disabled={matchType === "all"}
-              placeholder={matchType === "prefix" ? "orders/" : "orders"}
-            />
+      <div className="stack">
+        <div className="stack">
+          <h3 className="section-title">Scopes</h3>
+          {entry.scopes.length === 0 ? (
+            <div className="empty-state">No scopes attached.</div>
+          ) : (
+            <div className="stack">
+              {entry.scopes.map((scope) => (
+                <div key={scope.id} className="panel">
+                  <div className="split-row">
+                    <div className="stack">
+                      <div className="action-row">
+                        <Tag variant="primary">{scope.match_type}</Tag>
+                        <code>{scope.resource_value || "*"}</code>
+                      </div>
+                      <p className="small muted">
+                        {scope.can_read ? "read" : "no-read"} ·{" "}
+                        {scope.can_write ? "write" : "no-write"}
+                      </p>
+                    </div>
+                    <Btn
+                      onClick={() => deleteScope(scope.id)}
+                      busy={busy === `delete-scope-${scope.id}`}
+                      busyLabel="Deleting…"
+                      disabled={status !== "active"}
+                      variant="danger"
+                    >
+                      Delete scope
+                    </Btn>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="form-section">
+          <div className="form-grid">
+            <div>
+              <label className="label" htmlFor={`match-type-${entry.key.id}`}>
+                Match
+              </label>
+              <select
+                id={`match-type-${entry.key.id}`}
+                value={matchType}
+                onChange={(e) =>
+                  setMatchType(e.target.value as "all" | "exact" | "prefix")
+                }
+              >
+                <option value="all">all buckets</option>
+                <option value="exact">exact bucket</option>
+                <option value="prefix">bucket prefix</option>
+              </select>
+            </div>
+            <div>
+              <label className="label" htmlFor={`bucket-${entry.key.id}`}>
+                Bucket
+              </label>
+              <input
+                id={`bucket-${entry.key.id}`}
+                type="text"
+                value={bucket}
+                onChange={(e) => setBucket(e.target.value)}
+                disabled={matchType === "all"}
+                placeholder={matchType === "prefix" ? "orders/" : "orders"}
+              />
+            </div>
           </div>
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <label style={checkboxLabel}>
+
+          <div className="checkbox-row">
+            <label className="checkbox">
               <input
                 type="checkbox"
                 checked={canRead}
@@ -379,7 +356,7 @@ function KeyCard({
               />
               Read
             </label>
-            <label style={checkboxLabel}>
+            <label className="checkbox">
               <input
                 type="checkbox"
                 checked={canWrite}
@@ -390,14 +367,16 @@ function KeyCard({
             <Btn
               onClick={createScope}
               busy={busy === `create-scope-${entry.key.id}`}
+              busyLabel="Adding…"
               disabled={mutationsDisabled}
+              variant="primary"
             >
               Add scope
             </Btn>
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -405,70 +384,47 @@ function Btn({
   children,
   onClick,
   busy,
+  busyLabel = "Working…",
   disabled,
-  color,
+  title,
+  variant = "secondary",
 }: {
   children: React.ReactNode;
   onClick: () => void;
   busy: boolean;
+  busyLabel?: string;
   disabled?: boolean;
-  color?: string;
+  title?: string;
+  variant?: "primary" | "secondary" | "warning" | "danger";
 }) {
+  const className =
+    variant === "primary"
+      ? "button-primary"
+      : variant === "danger"
+        ? "button-danger"
+        : variant === "warning"
+          ? "button-warning"
+          : "button-secondary";
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled || busy}
-      style={{
-        padding: "8px 14px",
-        background: color || "var(--bg-tertiary)",
-        color: color ? "#000" : "var(--text-primary)",
-        border: "1px solid var(--border-primary)",
-        borderRadius: 4,
-        fontFamily: "var(--font-mono)",
-        fontSize: 13,
-        cursor: disabled ? "not-allowed" : busy ? "wait" : "pointer",
-        opacity: disabled ? 0.5 : 1,
-      }}
+      title={title}
+      className={className}
     >
-      {busy ? "…" : children}
+      {busy ? busyLabel : children}
     </button>
   );
 }
 
 function Tag({
   children,
-  color,
+  variant = "neutral",
 }: {
   children: React.ReactNode;
-  color: string;
+  variant?: "primary" | "success" | "warning" | "danger" | "neutral";
 }) {
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 6px",
-        borderRadius: 3,
-        background: color,
-        color: "#000",
-        fontSize: 11,
-      }}
-    >
-      {children}
-    </span>
-  );
+  return <span className={`badge badge-${variant}`}>{children}</span>;
 }
-
-const card: React.CSSProperties = {
-  border: "1px solid var(--border-primary)",
-  borderRadius: 4,
-  padding: 16,
-  background: "var(--bg-secondary)",
-};
-
-const checkboxLabel: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  marginBottom: 0,
-};

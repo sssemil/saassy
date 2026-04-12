@@ -1,4 +1,6 @@
 "use client";
+
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 function getTokenFromSearch(): string | null {
@@ -20,6 +22,8 @@ export default function MagicPage() {
       return;
     }
 
+    let redirectTimer: number | undefined;
+
     (async () => {
       try {
         const res = await fetch("/api/auth/consume", {
@@ -33,53 +37,62 @@ export default function MagicPage() {
           throw new Error("Invalid or expired token");
         }
 
-        setStatus("Authentication successful! Redirecting...");
+        setStatus("Authentication successful. Redirecting...");
         setDone(true);
 
         const next = localStorage.getItem("post_login_next") || "/";
         localStorage.removeItem("post_login_next");
-        setTimeout(() => {
+        redirectTimer = window.setTimeout(() => {
           window.location.href = next;
         }, 500);
-      } catch (e: any) {
-        setStatus(e.message || "Authentication failed");
+      } catch (err) {
+        setStatus(err instanceof Error ? err.message : "Authentication failed");
         setError(true);
       }
     })();
+
+    return () => {
+      if (redirectTimer) window.clearTimeout(redirectTimer);
+    };
   }, []);
 
   return (
-    <main>
-      <div
-        className="container"
-        style={{ maxWidth: "480px", margin: "80px auto", textAlign: "center" }}
-      >
-        <h1>🔑 Magic Link</h1>
+    <main className="auth-shell">
+      <section className="surface auth-panel">
+        <div className="page-heading">
+          <span className="eyebrow">Magic link</span>
+          <h1>Authenticating</h1>
+          <p className="page-subtitle">
+            We are validating your sign-in link and restoring your session.
+          </p>
+        </div>
 
         {done ? (
-          <div className="message success">
-            <div className="loading-text" style={{ justifyContent: "center" }}>
+          <div className="notice notice-success">
+            <div className="loading-text">
               <span className="spinner" />
               <span>{status}</span>
             </div>
           </div>
         ) : error ? (
-          <div className="message error">
-            <strong>✗ Authentication Failed</strong>
-            <p style={{ marginTop: "8px", marginBottom: 0 }}>{status}</p>
-            <p style={{ marginTop: "16px", marginBottom: 0 }}>
-              <a href="/">← Return to sign in</a>
-            </p>
+          <div className="notice notice-danger">
+            <span className="notice-title">Authentication failed</span>
+            <p className="notice-copy">{status}</p>
+            <div className="inline-links">
+              <Link href="/login" className="pill-link">
+                Return to sign in
+              </Link>
+            </div>
           </div>
         ) : (
-          <div className="message info">
-            <div className="loading-text" style={{ justifyContent: "center" }}>
+          <div className="notice notice-info">
+            <div className="loading-text">
               <span className="spinner" />
               <span>{status}</span>
             </div>
           </div>
         )}
-      </div>
+      </section>
     </main>
   );
 }

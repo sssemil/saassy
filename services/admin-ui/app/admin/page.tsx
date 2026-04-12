@@ -22,37 +22,23 @@ export default async function AdminOverviewPage() {
   ];
 
   return (
-    <div>
-      <h1 style={{ fontSize: 22, marginBottom: 24 }}>Overview</h1>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: 16,
-        }}
-      >
-        {cards.map((c) => (
-          <div
-            key={c.label}
-            style={{
-              padding: 20,
-              border: "1px solid var(--border-primary)",
-              borderRadius: 4,
-              background: "var(--bg-secondary)",
-            }}
-          >
-            <div
-              style={{
-                color: "var(--text-muted)",
-                fontSize: 12,
-                textTransform: "uppercase",
-              }}
-            >
-              {c.label}
-            </div>
-            <div style={{ fontSize: 28, marginTop: 6 }}>
-              {c.value.toLocaleString()}
-            </div>
+    <div className="stack-lg">
+      <section className="surface hero-surface">
+        <div className="page-heading">
+          <span className="eyebrow">Operations</span>
+          <h1>Overview</h1>
+          <p className="page-subtitle">
+            Monitor the current user base and account health across the
+            dashboard.
+          </p>
+        </div>
+      </section>
+
+      <div className="stats-grid">
+        {cards.map((card) => (
+          <div key={card.label} className="stat-card">
+            <div className="stat-label">{card.label}</div>
+            <div className="stat-value">{card.value.toLocaleString()}</div>
           </div>
         ))}
       </div>

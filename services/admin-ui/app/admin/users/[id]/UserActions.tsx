@@ -80,23 +80,25 @@ export default function UserActions({
     });
 
   const disabled = (name: string) => busy !== null && busy !== name;
+  const description = isAdmin
+    ? "This is another admin account, so freeze, impersonate, and delete stay disabled here."
+    : "Freeze access, impersonate the session, or permanently remove the user.";
 
   return (
-    <div>
-      <h2
-        style={{
-          fontSize: 15,
-          marginBottom: 12,
-          color: "var(--text-secondary)",
-        }}
-      >
-        Actions
-      </h2>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <div className="stack">
+      <div className="section-header">
+        <div className="stack">
+          <h2 className="section-title">Account actions</h2>
+          <p className="section-copy">{description}</p>
+        </div>
+      </div>
+
+      <div className="action-row">
         {isFrozen ? (
           <Btn
             onClick={unfreeze}
             busy={busy === "unfreeze"}
+            busyLabel="Unfreezing…"
             disabled={disabled("unfreeze")}
           >
             Unfreeze
@@ -105,9 +107,10 @@ export default function UserActions({
           <Btn
             onClick={freeze}
             busy={busy === "freeze"}
+            busyLabel="Freezing…"
             disabled={isAdmin || disabled("freeze")}
             title={isAdmin ? "Cannot freeze another admin" : undefined}
-            color="var(--accent-orange)"
+            variant="warning"
           >
             Freeze
           </Btn>
@@ -115,6 +118,7 @@ export default function UserActions({
         <Btn
           onClick={impersonate}
           busy={busy === "impersonate"}
+          busyLabel="Impersonating…"
           disabled={isAdmin || isFrozen || disabled("impersonate")}
           title={
             isAdmin
@@ -129,17 +133,20 @@ export default function UserActions({
         <Btn
           onClick={del}
           busy={busy === "delete"}
+          busyLabel="Deleting…"
           disabled={isAdmin || disabled("delete")}
           title={isAdmin ? "Cannot delete another admin" : undefined}
-          color="var(--accent-red)"
+          variant="danger"
         >
           Delete
         </Btn>
       </div>
+
       {error && (
-        <p style={{ marginTop: 12, color: "var(--text-error)" }}>
-          Error: {error}
-        </p>
+        <div className="notice notice-danger">
+          <span className="notice-title">Action failed</span>
+          <p className="notice-copy">{error}</p>
+        </div>
       )}
     </div>
   );
@@ -149,36 +156,37 @@ function Btn({
   children,
   onClick,
   busy,
+  busyLabel = "Working…",
   disabled,
   title,
-  color,
+  variant = "secondary",
 }: {
   children: React.ReactNode;
   onClick: () => void;
   busy: boolean;
+  busyLabel?: string;
   disabled?: boolean;
   title?: string;
-  color?: string;
+  variant?: "primary" | "secondary" | "warning" | "danger";
 }) {
+  const className =
+    variant === "primary"
+      ? "button-primary"
+      : variant === "danger"
+        ? "button-danger"
+        : variant === "warning"
+          ? "button-warning"
+          : "button-secondary";
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled || busy}
       title={title}
-      style={{
-        padding: "8px 14px",
-        background: color || "var(--bg-tertiary)",
-        color: color ? "#000" : "var(--text-primary)",
-        border: "1px solid var(--border-primary)",
-        borderRadius: 4,
-        fontFamily: "var(--font-mono)",
-        fontSize: 13,
-        cursor: disabled ? "not-allowed" : busy ? "wait" : "pointer",
-        opacity: disabled ? 0.5 : 1,
-      }}
+      className={className}
     >
-      {busy ? "…" : children}
+      {busy ? busyLabel : children}
     </button>
   );
 }

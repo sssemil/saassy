@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import DeveloperConsoleActions from "./DeveloperConsoleActions";
 import { serverApiFetch } from "../lib/api-fetch";
+import DeveloperConsoleActions from "./DeveloperConsoleActions";
 
 type Me = {
   id: string;
@@ -65,7 +65,9 @@ export default async function DashboardPage() {
 
   const keysWithScopes = await Promise.all(
     keys.map(async (key) => {
-      const scopesRes = await serverApiFetch(`/api/developer/keys/${key.id}/scopes`);
+      const scopesRes = await serverApiFetch(
+        `/api/developer/keys/${key.id}/scopes`,
+      );
       if (!scopesRes.ok) {
         throw new Error(`developer scopes load failed: ${scopesRes.status}`);
       }
@@ -74,67 +76,82 @@ export default async function DashboardPage() {
     }),
   );
 
+  const activeKeys = keysWithScopes.filter(({ key }) => {
+    if (key.revoked_at) return false;
+    if (!key.expires_at) return true;
+    return new Date(key.expires_at).getTime() > Date.now();
+  }).length;
+  const scopeCount = keysWithScopes.reduce(
+    (total, entry) => total + entry.scopes.length,
+    0,
+  );
+
   return (
-    <main style={{ maxWidth: 1120, margin: "48px auto", padding: 24 }}>
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          flexWrap: "wrap",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
-      >
-        <Link href="/profile" style={topLink}>
-          Profile
-        </Link>
-        {me.is_admin && (
-          <Link href="/admin" style={topLink}>
-            Admin
-          </Link>
-        )}
-      </div>
-
-      <h1 style={{ fontSize: 24, marginBottom: 12 }}>Developer console</h1>
-      <p style={{ marginBottom: 24, color: "var(--text-secondary)" }}>
-        Every user gets a developer identity. Manage your API keys and bucket
-        scopes here.
-      </p>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(280px, 360px) 1fr",
-          gap: 24,
-          alignItems: "start",
-        }}
-      >
-        <section
-          style={{
-            border: "1px solid var(--border-primary)",
-            borderRadius: 4,
-            padding: 16,
-            background: "var(--bg-secondary)",
-          }}
-        >
-          <h2 style={{ fontSize: 18, marginBottom: 16 }}>{me.email}</h2>
-          <Row label="Email" value={me.email} />
-          <Row label="Developer ID" value={<code>{developer.public_id}</code>} />
-          <Row label="Key count" value={String(keys.length)} />
-          <Row
-            label="Created"
-            value={new Date(developer.created_at).toLocaleString()}
-          />
-          <Row
-            label="Updated"
-            value={new Date(developer.updated_at).toLocaleString()}
-          />
+    <main className="page-shell">
+      <div className="stack-lg">
+        <section className="surface hero-surface">
+          <div className="page-header">
+            <div className="page-heading">
+              <span className="eyebrow">Developer access</span>
+              <h1>Developer console</h1>
+              <p className="page-subtitle">
+                Every user gets a developer identity. Issue keys, manage scopes,
+                and keep API access under your account.
+              </p>
+            </div>
+            <div className="header-actions">
+              <span className="badge badge-success">active</span>
+            </div>
+          </div>
+          <div className="pill-nav">
+            <Link href="/profile" className="pill-link">
+              Profile
+            </Link>
+            {me.is_admin && (
+              <Link href="/admin" className="pill-link">
+                Admin panel
+              </Link>
+            )}
+          </div>
         </section>
 
-        <DeveloperConsoleActions
-          developerPublicId={developer.public_id}
-          keys={keysWithScopes}
-        />
+        <section className="stats-grid">
+          <Stat label="API keys" value={keys.length.toLocaleString()} />
+          <Stat label="Active keys" value={activeKeys.toLocaleString()} />
+          <Stat label="Scopes" value={scopeCount.toLocaleString()} />
+        </section>
+
+        <div className="grid-sidebar">
+          <section className="surface">
+            <div className="section-header">
+              <div className="stack">
+                <h2 className="section-title">{me.email}</h2>
+                <p className="section-copy">
+                  Your personal developer identity and current API access
+                  footprint.
+                </p>
+              </div>
+            </div>
+            <div className="meta-list">
+              <Row label="Email" value={me.email} />
+              <Row label="Developer ID" value={<code>{developer.public_id}</code>} />
+              <Row label="Key count" value={String(keys.length)} />
+              <Row
+                label="Created"
+                value={new Date(developer.created_at).toLocaleString()}
+              />
+              <Row
+                label="Updated"
+                value={new Date(developer.updated_at).toLocaleString()}
+              />
+            </div>
+          </section>
+
+          <DeveloperConsoleActions
+            developerPublicId={developer.public_id}
+            keys={keysWithScopes}
+          />
+        </div>
       </div>
     </main>
   );
@@ -142,33 +159,18 @@ export default async function DashboardPage() {
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "120px 1fr",
-        gap: 12,
-        marginBottom: 10,
-      }}
-    >
-      <div
-        style={{
-          color: "var(--text-muted)",
-          fontSize: 12,
-          textTransform: "uppercase",
-        }}
-      >
-        {label}
-      </div>
-      <div>{value}</div>
+    <div className="meta-row">
+      <div className="meta-label">{label}</div>
+      <div className="meta-value">{value}</div>
     </div>
   );
 }
 
-const topLink: React.CSSProperties = {
-  color: "var(--text-link)",
-  textDecoration: "none",
-  fontSize: 13,
-  padding: "4px 10px",
-  border: "1px solid var(--border-primary)",
-  borderRadius: 4,
-};
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="stat-card">
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}</div>
+    </div>
+  );
+}

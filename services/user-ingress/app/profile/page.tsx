@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { serverApiFetch } from "../lib/api-fetch";
+
 import DeleteAccountButton from "./DeleteAccountButton";
+import { serverApiFetch } from "../lib/api-fetch";
 
 type Me = {
   id: string;
@@ -19,60 +21,67 @@ export default async function ProfilePage() {
   const me: Me = await res.json();
 
   return (
-    <main style={{ maxWidth: 520, margin: "80px auto", padding: 24 }}>
-      <h1 style={{ fontSize: 22, marginBottom: 24 }}>Your profile</h1>
+    <main className="page-shell page-shell-narrow">
+      <div className="stack-lg">
+        <section className="surface hero-surface">
+          <div className="page-header">
+            <div className="page-heading">
+              <span className="eyebrow">Account</span>
+              <h1>Your profile</h1>
+              <p className="page-subtitle">
+                Manage your account and jump straight into your developer or
+                admin tools.
+              </p>
+            </div>
+            <div className="header-actions">
+              <span
+                className={`badge ${
+                  me.is_admin ? "badge-primary" : "badge-neutral"
+                }`}
+              >
+                {me.is_admin ? "admin" : "developer"}
+              </span>
+            </div>
+          </div>
+          <div className="pill-nav">
+            <Link href="/dashboard" className="pill-link">
+              Developer console
+            </Link>
+            {me.is_admin && (
+              <Link href="/admin" className="pill-link">
+                Admin panel
+              </Link>
+            )}
+          </div>
+        </section>
 
-      <div
-        style={{
-          padding: 20,
-          border: "1px solid var(--border-primary)",
-          borderRadius: 4,
-          background: "var(--bg-secondary)",
-          marginBottom: 24,
-        }}
-      >
-        <Row label="Email" value={me.email} />
-        <Row label="Role" value={me.is_admin ? "Admin" : "Developer"} />
-        <Row
-          label="User ID"
-          value={<code style={{ fontSize: 12 }}>{me.id}</code>}
-        />
-      </div>
+        <section className="surface">
+          <div className="section-header">
+            <div className="stack">
+              <h2 className="section-title">Profile details</h2>
+              <p className="section-copy">
+                Your core user identity and access level.
+              </p>
+            </div>
+          </div>
+          <div className="meta-list">
+            <Row label="Email" value={me.email} />
+            <Row label="Role" value={me.is_admin ? "Admin" : "Developer"} />
+            <Row label="User ID" value={<code>{me.id}</code>} />
+          </div>
+        </section>
 
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-        <a href="/dashboard" style={{ color: "var(--text-link)" }}>
-          Open developer console →
-        </a>
-        {me.is_admin && (
-          <a href="/admin" style={{ color: "var(--text-link)" }}>
-            Open admin panel →
-          </a>
-        )}
-      </div>
-
-      <div
-        style={{
-          marginTop: 40,
-          padding: 20,
-          border: "1px solid var(--border-error)",
-          borderRadius: 4,
-        }}
-      >
-        <h2
-          style={{ fontSize: 15, marginBottom: 8, color: "var(--text-error)" }}
-        >
-          Danger zone
-        </h2>
-        <p
-          style={{
-            color: "var(--text-secondary)",
-            marginBottom: 12,
-            fontSize: 13,
-          }}
-        >
-          Permanently delete your account. This cannot be undone.
-        </p>
-        <DeleteAccountButton />
+        <section className="surface surface-danger">
+          <div className="section-header">
+            <div className="stack">
+              <h2 className="section-title">Danger zone</h2>
+              <p className="section-copy">
+                Permanently delete your account. This cannot be undone.
+              </p>
+            </div>
+          </div>
+          <DeleteAccountButton />
+        </section>
       </div>
     </main>
   );
@@ -80,17 +89,9 @@ export default async function ProfilePage() {
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        padding: "6px 0",
-        borderBottom: "1px solid var(--border-primary)",
-      }}
-    >
-      <div style={{ width: 100, color: "var(--text-muted)", fontSize: 13 }}>
-        {label}
-      </div>
-      <div style={{ flex: 1, fontSize: 13 }}>{value}</div>
+    <div className="meta-row">
+      <div className="meta-label">{label}</div>
+      <div className="meta-value">{value}</div>
     </div>
   );
 }

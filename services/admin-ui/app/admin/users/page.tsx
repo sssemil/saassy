@@ -1,4 +1,5 @@
 import Link from "next/link";
+
 import { serverApiFetch } from "../../lib/api-fetch";
 
 type User = {
@@ -38,143 +39,121 @@ export default async function UsersListPage({
   if (!res.ok) throw new Error(`users load failed: ${res.status}`);
   const data: ListResponse = await res.json();
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
+  const prevQuery = new URLSearchParams({
+    ...(q ? { q } : {}),
+    page: String(page - 1),
+  }).toString();
+  const nextQuery = new URLSearchParams({
+    ...(q ? { q } : {}),
+    page: String(page + 1),
+  }).toString();
 
   return (
-    <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Users</h1>
+    <div className="stack-lg">
+      <section className="surface hero-surface">
+        <div className="page-header">
+          <div className="page-heading">
+            <span className="eyebrow">People</span>
+            <h1>Users</h1>
+            <p className="page-subtitle">
+              Search and inspect every user account that can access the
+              dashboard.
+            </p>
+          </div>
+          <div className="header-actions">
+            <span className="badge badge-neutral">
+              {data.total.toLocaleString()} total
+            </span>
+          </div>
+        </div>
 
-      <form method="get" style={{ marginBottom: 16 }}>
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Search by email"
-          style={{
-            padding: "8px 12px",
-            background: "var(--bg-secondary)",
-            color: "var(--text-primary)",
-            border: "1px solid var(--border-primary)",
-            borderRadius: 4,
-            fontFamily: "var(--font-mono)",
-            fontSize: 13,
-            minWidth: 280,
-          }}
-        />
-        <button
-          type="submit"
-          style={{
-            marginLeft: 8,
-            padding: "8px 14px",
-            background: "var(--bg-tertiary)",
-            color: "var(--text-primary)",
-            border: "1px solid var(--border-primary)",
-            borderRadius: 4,
-            fontFamily: "var(--font-mono)",
-            fontSize: 13,
-            cursor: "pointer",
-          }}
-        >
-          Search
-        </button>
-      </form>
+        <form method="get" className="search-form">
+          <div className="field-grow">
+            <label className="label" htmlFor="q">
+              Search users
+            </label>
+            <input
+              id="q"
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Search by email"
+            />
+          </div>
+          <button type="submit" className="button-primary">
+            Search
+          </button>
+          {q && (
+            <Link href="/admin/users" className="pill-link">
+              Clear
+            </Link>
+          )}
+        </form>
+      </section>
 
-      <div
-        style={{
-          border: "1px solid var(--border-primary)",
-          borderRadius: 4,
-          overflow: "hidden",
-          background: "var(--bg-secondary)",
-        }}
-      >
-        <table
-          style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}
-        >
-          <thead>
-            <tr style={{ background: "var(--bg-tertiary)", textAlign: "left" }}>
-              <th style={th}>Email</th>
-              <th style={th}>Created</th>
-              <th style={th}>Last login</th>
-              <th style={th}>Flags</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.users.length === 0 ? (
+      <section className="surface table-card">
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td
-                  colSpan={4}
-                  style={{
-                    padding: 20,
-                    textAlign: "center",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  No users found.
-                </td>
+                <th>Email</th>
+                <th>Created</th>
+                <th>Last login</th>
+                <th>Flags</th>
               </tr>
-            ) : (
-              data.users.map((u) => (
-                <tr
-                  key={u.id}
-                  style={{ borderTop: "1px solid var(--border-primary)" }}
-                >
-                  <td style={td}>
-                    <Link
-                      href={`/admin/users/${u.id}`}
-                      style={{
-                        color: "var(--text-link)",
-                        textDecoration: "none",
-                      }}
-                    >
-                      {u.email}
-                    </Link>
-                  </td>
-                  <td style={td}>{new Date(u.created_at).toLocaleString()}</td>
-                  <td style={td}>
-                    {u.last_login_at
-                      ? new Date(u.last_login_at).toLocaleString()
-                      : "—"}
-                  </td>
-                  <td style={td}>
-                    {u.is_admin && <Tag color="var(--accent-blue)">admin</Tag>}
-                    {u.is_frozen && (
-                      <Tag color="var(--accent-orange)">frozen</Tag>
-                    )}
+            </thead>
+            <tbody>
+              {data.users.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="table-empty">
+                    No users found.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                data.users.map((u) => (
+                  <tr key={u.id}>
+                    <td>
+                      <Link href={`/admin/users/${u.id}`} className="link-inline">
+                        {u.email}
+                      </Link>
+                    </td>
+                    <td>{new Date(u.created_at).toLocaleString()}</td>
+                    <td>
+                      {u.last_login_at
+                        ? new Date(u.last_login_at).toLocaleString()
+                        : "—"}
+                    </td>
+                    <td>
+                      <div className="action-row">
+                        {u.is_admin && <Tag variant="primary">admin</Tag>}
+                        {u.is_frozen ? (
+                          <Tag variant="warning">frozen</Tag>
+                        ) : !u.is_admin ? (
+                          <Tag>active</Tag>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      <div
-        style={{
-          marginTop: 12,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          fontSize: 13,
-          color: "var(--text-muted)",
-        }}
-      >
+      <div className="pagination">
         <span>
           {data.total.toLocaleString()} users · page {page} / {totalPages}
         </span>
-        <span style={{ flex: 1 }} />
+        <span className="spacer" />
         {page > 1 && (
-          <Link
-            href={`?${new URLSearchParams({ ...(q ? { q } : {}), page: String(page - 1) })}`}
-            style={pageLink}
-          >
-            ← Prev
+          <Link href={`?${prevQuery}`} className="pill-link">
+            Prev
           </Link>
         )}
         {page < totalPages && (
-          <Link
-            href={`?${new URLSearchParams({ ...(q ? { q } : {}), page: String(page + 1) })}`}
-            style={pageLink}
-          >
-            Next →
+          <Link href={`?${nextQuery}`} className="pill-link">
+            Next
           </Link>
         )}
       </div>
@@ -182,40 +161,12 @@ export default async function UsersListPage({
   );
 }
 
-const th: React.CSSProperties = {
-  padding: "10px 12px",
-  fontWeight: 600,
-  color: "var(--text-secondary)",
-};
-const td: React.CSSProperties = { padding: "10px 12px" };
-const pageLink: React.CSSProperties = {
-  color: "var(--text-link)",
-  textDecoration: "none",
-  padding: "4px 10px",
-  border: "1px solid var(--border-primary)",
-  borderRadius: 4,
-};
-
 function Tag({
   children,
-  color,
+  variant = "neutral",
 }: {
   children: React.ReactNode;
-  color: string;
+  variant?: "primary" | "success" | "warning" | "danger" | "neutral";
 }) {
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 6px",
-        marginRight: 4,
-        fontSize: 11,
-        borderRadius: 3,
-        background: color,
-        color: "#000",
-      }}
-    >
-      {children}
-    </span>
-  );
+  return <span className={`badge badge-${variant}`}>{children}</span>;
 }

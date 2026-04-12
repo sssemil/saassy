@@ -9,7 +9,6 @@ export default function LoginPage() {
   );
   const [error, setError] = useState<string | null>(null);
 
-  // Preserve ?next= across the magic-link round-trip via localStorage.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
@@ -40,83 +39,51 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: "80px auto", padding: 24 }}>
-      <h1 style={{ fontSize: 22, marginBottom: 6 }}>Sign in</h1>
-      <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>
-        Enter your email to receive a magic sign-in link.
-      </p>
-
-      {status === "sent" ? (
-        <div
-          style={{
-            padding: 16,
-            border: "1px solid var(--border-primary)",
-            borderRadius: 4,
-            background: "var(--bg-secondary)",
-          }}
-        >
-          <strong>Check your inbox.</strong>
-          <p style={{ marginTop: 8, color: "var(--text-secondary)" }}>
-            We sent a sign-in link to <strong>{email}</strong>. It expires in 15
-            minutes.
+    <main className="auth-shell">
+      <section className="surface hero-surface auth-panel">
+        <div className="page-heading">
+          <span className="eyebrow">Shardd account</span>
+          <h1>Sign in</h1>
+          <p className="page-subtitle">
+            Enter your email to receive a magic sign-in link.
           </p>
         </div>
-      ) : (
-        <form onSubmit={submit}>
-          <label
-            htmlFor="email"
-            style={{
-              display: "block",
-              marginBottom: 6,
-              color: "var(--text-secondary)",
-            }}
-          >
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              background: "var(--bg-secondary)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--border-primary)",
-              borderRadius: 4,
-              fontFamily: "var(--font-mono)",
-              fontSize: 14,
-            }}
-          />
-          <button
-            type="submit"
-            disabled={status === "sending"}
-            style={{
-              marginTop: 16,
-              width: "100%",
-              padding: "10px 14px",
-              background: "var(--accent-blue)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 4,
-              fontFamily: "var(--font-mono)",
-              fontSize: 14,
-              cursor: status === "sending" ? "wait" : "pointer",
-            }}
-          >
-            {status === "sending" ? "Sending…" : "Send magic link"}
-          </button>
-          {error && (
-            <p style={{ marginTop: 12, color: "var(--text-error)" }}>
-              Error: {error}
+
+        {status === "sent" ? (
+          <div className="notice notice-success">
+            <span className="notice-title">Check your inbox</span>
+            <p className="notice-copy">
+              We sent a sign-in link to <strong>{email}</strong>. It expires in
+              15 minutes.
             </p>
-          )}
-        </form>
-      )}
+          </div>
+        ) : (
+          <form onSubmit={submit}>
+            <div>
+              <label className="label" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoFocus
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+            <button
+              type="submit"
+              className="button-primary button-block"
+              disabled={status === "sending"}
+            >
+              {status === "sending" ? "Sending…" : "Send magic link"}
+            </button>
+            {error && <p className="small text-danger">Error: {error}</p>}
+          </form>
+        )}
+      </section>
     </main>
   );
 }
