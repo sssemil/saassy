@@ -84,6 +84,10 @@ async fn consume(
         if !profile.is_admin && app_state.config.admin_emails.contains(&email_lc) {
             app_state.user_repo.set_admin(user_id, true).await?;
         }
+        app_state
+            .developer_auth_use_cases
+            .ensure_owned_developer_account(profile.id, &profile.email)
+            .await?;
         app_state.user_repo.touch_last_login(user_id).await?;
 
         let email = profile.email;

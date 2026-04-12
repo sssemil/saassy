@@ -39,13 +39,16 @@ export default async function ProfilePage() {
         />
       </div>
 
-      {me.is_admin && (
-        <p style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+        <a href="/dashboard" style={{ color: "var(--text-link)" }}>
+          Open developer console →
+        </a>
+        {me.is_admin && (
           <a href="/admin" style={{ color: "var(--text-link)" }}>
             Open admin panel →
           </a>
-        </p>
-      )}
+        )}
+      </div>
 
       <div
         style={{

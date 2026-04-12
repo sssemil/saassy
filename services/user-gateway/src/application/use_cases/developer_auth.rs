@@ -54,6 +54,8 @@ pub struct DeveloperAccount {
     pub id: Uuid,
     pub public_id: String,
     pub name: String,
+    pub owner_user_id: Option<Uuid>,
+    pub owner_email: Option<String>,
     pub is_frozen: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -142,6 +144,12 @@ pub trait DeveloperAuthRepo: Send + Sync {
         public_id: &str,
         name: &str,
     ) -> AppResult<DeveloperAccount>;
+    async fn create_owned_developer_account(
+        &self,
+        owner_user_id: Uuid,
+        public_id: &str,
+        name: &str,
+    ) -> AppResult<DeveloperAccount>;
     async fn list_developer_accounts(
         &self,
         query: Option<&str>,
@@ -153,6 +161,10 @@ pub trait DeveloperAuthRepo: Send + Sync {
     async fn get_developer_account_by_public_id(
         &self,
         public_id: &str,
+    ) -> AppResult<Option<DeveloperAccount>>;
+    async fn get_developer_account_by_owner_user_id(
+        &self,
+        owner_user_id: Uuid,
     ) -> AppResult<Option<DeveloperAccount>>;
     async fn set_developer_account_frozen(
         &self,
@@ -205,6 +217,59 @@ impl DeveloperAuthUseCases {
             repo,
             positive_cache_ttl_ms,
         }
+    }
+
+    pub async fn ensure_owned_developer_account(
+        &self,
+        owner_user_id: Uuid,
+        owner_email: &str,
+    ) -> AppResult<DeveloperAccount> {
+        if let Some(account) = self
+            .repo
+            .get_developer_account_by_owner_user_id(owner_user_id)
+            .await?
+        {
+            return Ok(account);
+        }
+
+        let name = owner_email.trim();
+        if name.is_empty() {
+            return Err(AppError::InvalidInput(
+                "owner email is required to create a developer account".into(),
+            ));
+        }
+
+        for _ in 0..3 {
+            let public_id = generate_public_id();
+            match self
+                .repo
+                .create_owned_developer_account(owner_user_id, &public_id, name)
+                .await
+            {
+                Ok(account) => return Ok(account),
+                Err(AppError::Database(message))
+                    if message.contains("developer_accounts_public_id_key") =>
+                {
+                    continue;
+                }
+                Err(AppError::Database(message))
+                    if message.contains("uq_developer_accounts_owner_user_id") =>
+                {
+                    return self
+                        .repo
+                        .get_developer_account_by_owner_user_id(owner_user_id)
+                        .await?
+                        .ok_or_else(|| {
+                            AppError::Conflict("developer account ownership already exists".into())
+                        });
+                }
+                Err(error) => return Err(error),
+            }
+        }
+
+        Err(AppError::Conflict(
+            "failed to allocate a unique developer account id".into(),
+        ))
     }
 
     pub async fn create_developer_account(&self, name: &str) -> AppResult<DeveloperAccount> {

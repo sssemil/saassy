@@ -6,6 +6,7 @@ type Developer = {
   id: string;
   public_id: string;
   name: string;
+  owner_email: string | null;
   is_frozen: boolean;
   created_at: string;
   updated_at: string;
@@ -51,7 +52,7 @@ export default async function DevelopersPage({
           type="search"
           name="q"
           defaultValue={q}
-          placeholder="Search by developer name or public id"
+          placeholder="Search by developer name, public id, or owner email"
           style={{
             padding: "8px 12px",
             background: "var(--bg-secondary)",
@@ -95,6 +96,7 @@ export default async function DevelopersPage({
           <thead>
             <tr style={{ background: "var(--bg-tertiary)", textAlign: "left" }}>
               <th style={th}>Name</th>
+              <th style={th}>Owner</th>
               <th style={th}>Public ID</th>
               <th style={th}>Created</th>
               <th style={th}>Status</th>
@@ -104,7 +106,7 @@ export default async function DevelopersPage({
             {data.developers.length === 0 ? (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={5}
                   style={{
                     padding: 20,
                     textAlign: "center",
@@ -131,6 +133,7 @@ export default async function DevelopersPage({
                       {developer.name}
                     </Link>
                   </td>
+                  <td style={td}>{developer.owner_email || "unassigned"}</td>
                   <td style={td}>
                     <code>{developer.public_id}</code>
                   </td>

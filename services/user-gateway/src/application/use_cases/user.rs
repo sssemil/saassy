@@ -94,7 +94,11 @@ impl AuthUseCases {
         self.magic_links
             .save(&token_hash, user_id, ttl_minutes)
             .await?;
-        let link = format!("{}/magic?token={}", self.app_origin, raw);
+        let link = format!(
+            "{}/magic?token={}",
+            self.app_origin.trim_end_matches('/'),
+            raw
+        );
         let (subject, headline, lead, button_label, reason, footer_note) = match lang {
             UserLanguage::En => (
                 "Sign in",
